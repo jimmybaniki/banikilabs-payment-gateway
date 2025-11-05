@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BANIKI LABS Payment Gateway (Kinshasa)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        // --- FIREBASE IMPORTS (MANDATORY BOILERPLATE) ---
+        // Les imports restent nécessaires, mais seront ignorés en mode local.
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Use Debug logging for development
+        setLogLevel('Debug');
+
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCxZtCylivY0cc-H_r5BHeXuSUKGKhnV14",
+  authDomain: "baniki-labs-gateway-log.firebaseapp.com",
+  projectId: "baniki-labs-gateway-log",
+  storageBucket: "baniki-labs-gateway-log.firebasestorage.app",
+  messagingSenderId: "1064084828353",
+  appId: "1:1064084828353:web:9cbb187765e8ace2cda440"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+        let db, auth, userId;
+        let isLocalMode = false; // Flag to check if we are running without Firebase setup
+
+        // --- FIXED PAYMENT RECIPIENT ---
+        const RECIPIENT_PHONE = "+243978415814";
+
+        // --- TRANSLATION DATA ---
+        const translations = {
+            en: {
+                app_subtitle: "Kinshasa Payment Gateway (DRC)",
+                section_title: "Complete Your Payment",
+                label_amount: "Amount to Pay",
+                label_operator: "Choose Mobile Money Operator",
+                btn_proceed: "Proceed to Payment",
+                modal_title: "Confirm Mobile Money",
+                modal_info_pay_for: "Payment for:",
+                modal_info_via: "Via:",
+                label_phone: "Your Mobile Number",
+                phone_placeholder: "e.g., 81 XXX XX XX",
+                modal_status_initial: (op) => `Enter your ${op} number to confirm the transaction.`,
+                modal_status_wait: "Waiting for PIN confirmation on your phone...",
+                modal_status_tip: "A security prompt is usually sent via SMS or USSD.",
+                status_success: "Transaction Successful!",
+                status_failed: "Transaction Failed. Try again.",
+                btn_confirm: "Confirm Payment",
+                btn_processing: "Processing...",
+                btn_completed: "Completed",
+                btn_cancel: "Cancel",
+                btn_close: "Close",
+                status_phone_error: "Please enter a valid phone number (minimum 9 digits).",
+                auth_loading: "Authenticating...",
+                auth_user_id: "User ID:",
+                auth_anon_id: "Anon ID:",
+                local_mode_warning: "Local Mode: DB logging disabled. UI is active.", // New
+            },
+            fr: {
+                app_subtitle: "Passerelle de Paiement Kinshasa (RDC)",
+                section_title: "Finalisez Votre Paiement",
+                label_amount: "Montant à Payer",
+                label_operator: "Choisissez l'Opérateur Mobile Money",
+                btn_proceed: "Passer au Paiement",
+                modal_title: "Confirmez Mobile Money",
+                modal_info_pay_for: "Paiement pour :",
+                modal_info_via: "Via :",
+                label_phone: "Votre Numéro de Téléphone",
+                phone_placeholder: "ex., 81 XXX XX XX",
+                modal_status_initial: (op) => `Entrez votre numéro ${op} pour confirmer la transaction.`,
+                modal_status_wait: "En attente de la confirmation PIN sur votre téléphone...",
+                modal_status_tip: "Une invite de sécurité est généralement envoyée par SMS ou USSD.",
+                status_success: "Transaction Réussie !",
+                status_failed: "Échec de la Transaction. Réessayez.",
+                btn_confirm: "Confirmer le Paiement",
+                btn_processing: "Traitement en cours...",
+                btn_completed: "Terminé",
+                btn_cancel: "Annuler",
+                btn_close: "Fermer",
+                status_phone_error: "Veuillez entrer un numéro de téléphone valide (minimum 9 chiffres).",
+                auth_loading: "Authentification...",
+                auth_user_id: "ID Utilisateur :",
+                auth_anon_id: "ID Anonyme :",
+                local_mode_warning: "Mode Local: L'enregistrement en DB est désactivé. L'interface est active.", // New
+            },
+            sw: {
+                app_subtitle: "Lango la Malipo Kinshasa (RDC)",
+                section_title: "Kamilisha Malipo Yako",
+                label_amount: "Kiasi cha Kulipa",
+                label_operator: "Chagua Huduma ya Mobile Money",
+                btn_proceed: "Endelea Kulipa",
+                modal_title: "Thibitisha Mobile Money",
+                modal_info_pay_for: "Malipo kwa:",
+                modal_info_via: "Kupitia:",
+                label_phone: "Namba Yako ya Simu",
+                phone_placeholder: "mf., 81 XXX XX XX",
+                modal_status_initial: (op) => `Ingiza namba yako ${op} ili kuthibitisha muamala.`,
+                modal_status_wait: "Inasubiri uthibitisho wa PIN kwenye simu yako...",
+                modal_status_tip: "Ujumbe wa usalama hutumwa kwa kawaida kupitia SMS au USSD.",
+                status_success: "Muamala Umefanikiwa!",
+                status_failed: "Muamala Umefeli. Jaribu tena.",
+                btn_confirm: "Thibitisha Malipo",
+                btn_processing: "Inachakata...",
+                btn_completed: "Imekamilika",
+                btn_cancel: "Ghairi",
+                btn_close: "Funga",
+                status_phone_error: "Tafadhali ingiza namba ya simu sahihi (angalau tarakimu 9).",
+                auth_loading: "Inathibitisha...",
+                auth_user_id: "Kitambulisho cha Mtumiaji:",
+                auth_anon_id: "Kitambulisho cha Anon:",
+                local_mode_warning: "Hali ya Karibu: Kuweka kumbukumbu kwa DB kumezimwa. UI inafanya kazi.", // New
+            }
+        };
+
+        let currentLang = 'fr'; // Default to French as it's the official language in Kinshasa
+
+        /**
+         * Updates all visible text elements based on the selected language.
+         */
+        function updateText() {
+            const lang = document.getElementById('lang-selector').value;
+            currentLang = lang;
+            const t = translations[lang];
+
+            // Update elements with data-i18n attributes
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) {
+                    el.textContent = t[key];
+                }
+            });
+
+            // Update placeholder/form labels
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (t[key]) {
+                    el.placeholder = t[key];
+                }
+            });
+            
+            // Re-run phone status setup if modal is open to update dynamic text
+            const modal = document.getElementById('payment-modal');
+            if (!modal.classList.contains('hidden')) {
+                const operator = document.getElementById('operator').value;
+                const statusElement = document.getElementById('modal-status');
+                 if (statusElement.getAttribute('data-status') === 'initial') {
+                    statusElement.innerHTML = `<div class="text-center text-sm mb-4 text-gray-600">${t.modal_status_initial(operator)}</div>`;
+                 }
+            }
+            
+            // Re-set User ID display after language change
+             const idDisplay = document.getElementById('user-id-display');
+             if (isLocalMode) {
+                 idDisplay.textContent = t.local_mode_warning;
+             } else if (auth && auth.currentUser) {
+                const prefix = auth.currentUser.isAnonymous ? t.auth_anon_id : t.auth_user_id;
+                idDisplay.textContent = `${prefix} ${userId}`;
+            }
+        }
+
+        /**
+         * Initializes Firebase or falls back to local mode.
+         */
+        async function initializeFirebase() {
+            const payButton = document.getElementById('pay-button');
+            const idDisplay = document.getElementById('user-id-display');
+            const t = translations[currentLang];
+
+            // Check if running in a secure environment (where config is provided)
+            if (Object.keys(firebaseConfig).length === 0) {
+                // --- LOCAL MODE FALLBACK ---
+                console.warn("ATTENTION: Configuration Firebase manquante. L'application est en Mode Local de Test.");
+                isLocalMode = true;
+                userId = 'LOCAL_USER_ID'; 
+                idDisplay.textContent = t.local_mode_warning;
+                payButton.disabled = false; // Enable button for local testing
+                updateText();
+                return; // Exit the function, bypass real Firebase initialization
+            }
+
+            // --- STANDARD EXECUTION PATH (Inside Canvas/Secure Environment) ---
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    userId = user ? user.uid : crypto.randomUUID();
+                    console.log("Firebase Auth State Changed. Current User ID:", userId);
+                    
+                    const prefix = user && user.isAnonymous ? t.auth_anon_id : t.auth_user_id;
+                    idDisplay.textContent = `${prefix} ${userId}`;
+                    
+                    // Now that auth is ready, enable the Pay button
+                    payButton.disabled = false;
+                    updateText(); // Ensure initial text is set after auth
+                });
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+                payButton.disabled = true;
+                idDisplay.textContent = `ERREUR: Échec du chargement de Firebase.`;
+            }
+        }
+        
+        // --- TRANSACTION LOGGING FUNCTION ---
+        /**
+         * Logs a simulated transaction to Firestore (or console in local mode).
+         */
+        async function logTransaction(transactionDetails) {
+            if (isLocalMode) {
+                // Local Mode: Log to console instead of Firestore
+                console.log("--- TRANSACTION LOG (LOCAL MODE) ---");
+                console.log({
+                    ...transactionDetails,
+                    userId: 'LOCAL_USER_ID', 
+                    timestamp: new Date().toISOString(),
+                    logType: 'LOCAL_SIMULATION',
+                    warning: "DATA NOT SENT TO FIREBASE"
+                });
+                console.log("-------------------------------------");
+                return;
+            }
+
+            if (!db || !userId) {
+                console.error("Firestore or User ID is not ready (non-local mode failed).");
+                return;
+            }
+
+            // Using public data path for shared transaction log
+            const transactionsCollectionRef = collection(db, "artifacts", appId, "public", "data", "transactions");
+
+            try {
+                const docRef = await addDoc(transactionsCollectionRef, {
+                    ...transactionDetails,
+                    userId: userId, 
+                    timestamp: serverTimestamp(),
+                    language: currentLang, // Log the language used for the transaction
+                    location: "Kinshasa, DRC",
+                    gatewayName: "BANIKI LABS Payment Gateway"
+                });
+                console.log("Transaction logged successfully with ID:", docRef.id);
+            } catch (e) {
+                console.error("Error adding transaction document:", e);
+            }
+        }
+
+        // --- GATEWAY LOGIC ---
+        window.onload = function() {
+            
+            // Attach language selector listener
+            document.getElementById('lang-selector').addEventListener('change', updateText);
+            
+            // Set initial loading text
+            document.getElementById('user-id-display').textContent = translations[currentLang].auth_loading;
+
+            // Initialize Firebase or local mode
+            initializeFirebase();
+            
+            const paymentForm = document.getElementById('payment-form');
+            const payButton = document.getElementById('pay-button');
+            const paymentModal = document.getElementById('payment-modal');
+            const modalStatus = document.getElementById('modal-status');
+            const modalPhoneInput = document.getElementById('modal-phone');
+            const modalPayButton = document.getElementById('modal-pay-button');
+            const modalCloseButton = document.getElementById('modal-close-button');
+
+            let currentTransaction = {};
+            
+            // Set up currency selector options
+            document.getElementById('currency').value = 'CDF'; 
+
+            // Event listener to open the modal
+            paymentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const t = translations[currentLang];
+                const amount = parseFloat(document.getElementById('amount').value);
+                const currency = document.getElementById('currency').value;
+                const operator = document.getElementById('operator').value;
+
+                if (isNaN(amount) || amount <= 0) {
+                     showTemporaryMessage(t.status_phone_error.replace('(minimum 9 digits)', ''), 'bg-red-500');
+                     return;
+                }
+                
+                // Conserve le numéro du destinataire pour le logging Firestore
+                currentTransaction = { amount, currency, operator, recipientPhone: RECIPIENT_PHONE };
+                
+                // Update modal display (sans le numéro du destinataire)
+                document.getElementById('modal-amount').textContent = `${amount.toFixed(2)} ${currency}`;
+                document.getElementById('modal-operator-name').textContent = operator;
+                modalStatus.innerHTML = `<div class="text-center text-sm mb-4 text-gray-600">${t.modal_status_initial(operator)}</div>`;
+                modalStatus.setAttribute('data-status', 'initial');
+                modalPhoneInput.value = ""; // Clear previous phone number
+                modalPhoneInput.disabled = false;
+                modalPayButton.disabled = false;
+                modalPayButton.textContent = t.btn_confirm;
+                modalCloseButton.textContent = t.btn_cancel;
+                
+                paymentModal.classList.remove('hidden');
+                
+            });
+            
+            // Event listener for payment simulation inside the modal
+            modalPayButton.addEventListener('click', async () => {
+                const t = translations[currentLang];
+                const phoneNumber = modalPhoneInput.value.trim();
+                
+                if (phoneNumber.length < 9) {
+                    modalStatus.innerHTML = `<span class="text-red-600">${t.status_phone_error}</span>`;
+                    return;
+                }
+                
+                modalPhoneInput.disabled = true;
+                modalPayButton.disabled = true;
+                modalPayButton.textContent = t.btn_processing;
+                modalStatus.innerHTML = `<div class="text-center">
+                    <svg class="animate-spin h-5 w-5 mr-3 inline text-blue-500" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    ${t.modal_status_wait}
+                    <p class="text-xs mt-2 text-gray-500">${t.modal_status_tip}</p>
+                </div>`;
+                modalStatus.setAttribute('data-status', 'pending');
+                
+                // Simulate network delay and processing (2-4 seconds)
+                const delay = Math.random() * 2000 + 2000;
+                
+                await new Promise(resolve => setTimeout(resolve, delay));
+                
+                // Simulate success 90% of the time, failure 10%
+                const success = Math.random() > 0.1;
+                
+                // Extract current transaction details, which includes the recipientPhone
+                const transactionResult = {
+                    ...currentTransaction,
+                    userPhone: phoneNumber, // Rename for clarity in log
+                    status: success ? 'SUCCESS' : 'FAILED',
+                    transactionId: `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+                };
+                
+                if (success) {
+                    modalStatus.innerHTML = `<div class="text-center text-green-600 font-bold text-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>${t.status_success}</div>`;
+                    modalPayButton.textContent = t.btn_completed;
+                    modalCloseButton.textContent = t.btn_close;
+                    modalStatus.setAttribute('data-status', 'success');
+                    
+                    // Log the successful transaction to Firestore / Console
+                    await logTransaction(transactionResult);
+                    
+                } else {
+                    modalStatus.innerHTML = `<div class="text-center text-red-600 font-bold text-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>${t.status_failed}</div>`;
+                    modalPayButton.textContent = t.btn_confirm;
+                    modalPayButton.disabled = false; // Allow retrying
+                    modalStatus.setAttribute('data-status', 'failed');
+                    
+                    // Log the failed transaction to Firestore / Console
+                    await logTransaction(transactionResult);
+                }
+            });
+            
+            // Event listener to close the modal
+            modalCloseButton.addEventListener('click', () => {
+                paymentModal.classList.add('hidden');
+            });
+
+            // Utility function for temporary messages
+            function showTemporaryMessage(message, bgColor) {
+                const msgBox = document.getElementById('temp-message');
+                msgBox.textContent = message;
+                msgBox.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+                setTimeout(() => {
+                    msgBox.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 opacity-0 transition-opacity duration-300`;
+                }, 3000);
+            }
+        };
+
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb; /* Light background for clean look */
+        }
+        .baniki-gradient {
+            background-image: linear-gradient(to right top, #0077B6, #00B4D8, #48CAE4); /* Blue theme: DRC National Colors (Blue) */
+        }
+        .shadow-baniki {
+            box-shadow: 0 10px 15px -3px rgba(0, 119, 182, 0.2), 0 4px 6px -2px rgba(0, 119, 182, 0.1);
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Header Controls -->
+    <div class="absolute top-2 right-2 flex items-center space-x-2 p-1">
+        <!-- Language Selector -->
+        <select id="lang-selector" class="bg-white border border-gray-300 text-gray-700 text-xs rounded-lg p-1.5 focus:ring-blue-500 focus:border-blue-500" value="fr">
+            <option value="fr">Français (FR)</option>
+            <option value="en">English (EN)</option>
+            <option value="sw">Kiswahili (SW)</option>
+        </select>
+         <!-- User ID Display -->
+        <div id="user-id-display" class="text-xs text-gray-500 bg-gray-100 p-1 rounded-md">
+            Authentification...
+        </div>
+    </div>
+
+    <!-- Temporary Message Box -->
+    <div id="temp-message" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-transparent text-white px-4 py-2 rounded-lg shadow-lg z-50 opacity-0 transition-opacity duration-300"></div>
+
+    <!-- Main Payment Container -->
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden shadow-baniki">
+            
+            <!-- Header -->
+            <header class="baniki-gradient p-6 text-white text-center rounded-t-xl">
+                <h1 class="text-3xl font-extrabold tracking-tight">BANIKI LABS</h1>
+                <p id="app-subtitle" data-i18n="app_subtitle" class="text-sm opacity-90 mt-1">Passerelle de Paiement Kinshasa (RDC)</p>
+            </header>
+            
+            <!-- Body Content -->
+            <div class="p-6">
+                <h2 id="section-title" data-i18n="section_title" class="text-xl font-semibold text-gray-800 mb-4">Finalisez Votre Paiement</h2>
+                
+                <form id="payment-form" class="space-y-4">
+                    
+                    <!-- Amount Input -->
+                    <div>
+                        <label for="amount" data-i18n="label_amount" class="block text-sm font-medium text-gray-700">Montant à Payer</label>
+                        <div class="mt-1 flex rounded-lg shadow-sm">
+                            <input type="number" step="0.01" id="amount" value="5000" required class="flex-1 block w-full rounded-l-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-3 sm:text-sm">
+                            <select id="currency" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-r-lg focus:ring-blue-500 focus:border-blue-500 p-3">
+                                <option value="CDF">CDF (Congolese Franc)</option>
+                                <option value="USD">USD (US Dollar)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Money Operator Selection -->
+                    <div>
+                        <label for="operator" data-i18n="label_operator" class="block text-sm font-medium text-gray-700">Choisissez l'Opérateur Mobile Money</label>
+                        <select id="operator" required class="mt-1 block w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-3 shadow-sm">
+                            <option value="Vodacom M-Pesa">Vodacom M-Pesa</option>
+                            <option value="Airtel Money">Airtel Money</option>
+                            <option value="Orange Money">Orange Money</option>
+                            <option value="Afrimoney">Africell Afrimoney</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Pay Button -->
+                    <button type="submit" id="pay-button" disabled data-i18n="btn_proceed" class="w-full baniki-gradient text-white font-bold py-3 px-4 rounded-lg hover:bg-opacity-90 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        Passer au Paiement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal Overlay -->
+    <div id="payment-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4 transform transition-all">
+            
+            <h3 data-i18n="modal_title" class="text-xl font-bold text-gray-800 mb-2">Confirmez Mobile Money</h3>
+            
+            <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p class="text-sm font-semibold text-blue-800"><span data-i18n="modal_info_pay_for">Paiement pour :</span> <span id="modal-amount" class="text-lg"></span></p>
+                <p class="text-xs text-blue-600"><span data-i18n="modal_info_via">Via :</span> <span id="modal-operator-name"></span></p>
+            </div>
+            
+            <!-- Phone Number Input -->
+            <div class="mb-4">
+                <label for="modal-phone" data-i18n="label_phone" class="block text-sm font-medium text-gray-700">Votre Numéro de Téléphone</label>
+                <input type="tel" id="modal-phone" data-i18n-placeholder="phone_placeholder" placeholder="ex., 81 XXX XX XX" class="mt-1 block w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-3 shadow-sm" required>
+            </div>
+            
+            <!-- Status Message Area -->
+            <div id="modal-status" data-status="initial" class="text-center text-sm mb-4 text-gray-600">
+                Entrez votre numéro pour confirmer la transaction.
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex space-x-3">
+                <button id="modal-close-button" type="button" data-i18n="btn_cancel" class="flex-1 bg-gray-200 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-300 transition-all duration-200">
+                    Annuler
+                </button>
+                <button id="modal-pay-button" type="button" data-i18n="btn_confirm" class="flex-1 baniki-gradient text-white font-bold py-3 rounded-lg hover:bg-opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Confirmer le Paiement
+                </button>
+            </div>
+            
+        </div>
+    </div>
+
+</body>
+</html>
