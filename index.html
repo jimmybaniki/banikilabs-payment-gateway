@@ -2,515 +2,2577 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BANIKI LABS Payment Gateway (Kinshasa)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Blive Simulator - Banikilabs (Supabase Cloud Sync)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module">
-        // --- FIREBASE IMPORTS (MANDATORY BOILERPLATE) ---
-        // Les imports restent nécessaires, mais seront ignorés en mode local.
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Use Debug logging for development
-        setLogLevel('Debug');
+    <!-- React and Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-        // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+    <!-- Supabase JS Library SDK -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-black text-white">
+    <div id="root"></div>
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCxZtCylivY0cc-H_r5BHeXuSUKGKhnV14",
-  authDomain: "baniki-labs-gateway-log.firebaseapp.com",
-  projectId: "baniki-labs-gateway-log",
-  storageBucket: "baniki-labs-gateway-log.firebasestorage.app",
-  messagingSenderId: "1064084828353",
-  appId: "1:1064084828353:web:9cbb187765e8ace2cda440"
+    <script type="text/babel">
+const { useState, useEffect } = React;
+
+const Icon = ({ label, className }) => (
+  <span className={className} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+    {label}
+  </span>
+);
+
+const Smartphone = props => <Icon label="📱" {...props} />;
+const Shield = props => <Icon label="🛡️" {...props} />;
+const Users = props => <Icon label="👥" {...props} />;
+const Activity = props => <Icon label="⚡" {...props} />;
+const ArrowRightLeft = props => <Icon label="↔️" {...props} />;
+const PlusCircle = props => <Icon label="➕" {...props} />;
+const MinusCircle = props => <Icon label="➖" {...props} />;
+const ShoppingBag = props => <Icon label="🛍️" {...props} />;
+const DollarSign = props => <Icon label="$" {...props} />;
+const Bell = props => <Icon label="🔔" {...props} />;
+const Send = props => <Icon label="📤" {...props} />;
+const Key = props => <Icon label="🔑" {...props} />;
+const Coins = props => <Icon label="🪙" {...props} />;
+const Database = props => <Icon label="🗄️" {...props} />;
+const RefreshCw = props => <Icon label="🔄" {...props} />;
+const CheckCircle = props => <Icon label="✔️" {...props} />;
+const AlertTriangle = props => <Icon label="⚠️" {...props} />;
+const QrCode = props => <Icon label="🔲" {...props} />;
+const TrendingUp = props => <Icon label="📈" {...props} />;
+const Sliders = props => <Icon label="🎛️" {...props} />;
+const Sparkles = props => <Icon label="✨" {...props} />;
+const History = props => <Icon label="🕘" {...props} />;
+const Landmark = props => <Icon label="🏛️" {...props} />;
+const Layers = props => <Icon label="🗂️" {...props} />;
+const HelpCircle = props => <Icon label="❓" {...props} />;
+
+// Données d'origine pour le Seeding si la table est vide
+const INITIAL_USERS = {
+  tresor: {
+    id: 'TR_01',
+    role: 'tresor', 
+    name: 'Banikilabs Trésor / BCC',
+    phone: '+243 811 000 000',
+    balanceFC: 50000000,
+    balanceUSD: 100000,
+    commissionFC: 0,
+    commissionUSD: 0,
+    status: 'Actif', 
+    code: '9999'
+  },
+  superAgent: {
+    id: 'SA_01',
+    role: 'superAgent',
+    name: 'Super Agent M-Pesa Kivu',
+    phone: '+243 810 000 001',
+    balanceFC: 10000000,
+    balanceUSD: 25000,
+    commissionFC: 154500,
+    commissionUSD: 850,
+    status: 'Actif',
+    code: '1001'
+  },
+  agent: {
+    id: 'AG_01',
+    role: 'agent',
+    name: 'Blive Express - Kiosque #45',
+    phone: '+243 820 123 456',
+    balanceFC: 1500000,
+    balanceUSD: 4500,
+    commissionFC: 42300,
+    commissionUSD: 120,
+    status: 'Actif',
+    code: '2022'
+  },
+  merchant: {
+    id: 'ME_01',
+    role: 'merchant',
+    name: 'Alimentation du Centre & Fils',
+    phone: '+243 815 999 000',
+    merchantCode: '882211',
+    balanceFC: 450000,
+    balanceUSD: 1200,
+    status: 'Actif',
+    code: '3033'
+  },
+  clientA: {
+    id: 'CL_A',
+    role: 'client',
+    name: 'Jean Dupont',
+    phone: '+243 812 345 678',
+    balanceFC: 250000,
+    balanceUSD: 350,
+    status: 'Actif',
+    code: '1234'
+  },
+  clientB: {
+    id: 'CL_B',
+    role: 'client',
+    name: 'Marie Kabange',
+    phone: '+243 822 987 654',
+    balanceFC: 85000,
+    balanceUSD: 95,
+    status: 'Actif',
+    code: '5678'
+  }
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const INITIAL_TRANSACTIONS = [
+  { id: 'TX-9028', type: 'MINT_MONNAIE', sender: 'BCC (Banque Centrale)', receiver: 'Banikilabs Trésor', amount: 50000000, currency: 'FC', date: 'Aujourd\'hui, 08:30', status: 'Succès' },
+  { id: 'TX-9029', type: 'MINT_MONNAIE', sender: 'BCC (Banque Centrale)', receiver: 'Banikilabs Trésor', amount: 100000, currency: 'USD', date: 'Aujourd\'hui, 08:31', status: 'Succès' },
+  { id: 'TX-9030', type: 'APPRO_SUPER_AGENT', sender: 'Banikilabs Trésor', receiver: 'Super Agent Blive Kivu', amount: 10000000, currency: 'FC', date: 'Aujourd\'hui, 09:12', status: 'Succès' },
+  { id: 'TX-9031', type: 'APPRO_SUPER_AGENT', sender: 'Banikilabs Trésor', receiver: 'Super Agent Blive Kivu', amount: 25000, currency: 'USD', date: 'Aujourd\'hui, 09:15', status: 'Succès' },
+  { id: 'TX-9032', type: 'APPRO_AGENT', sender: 'Super Agent Blive Kivu', receiver: 'Blive Express - Kiosque #45', amount: 500000, currency: 'FC', date: 'Aujourd\'hui, 09:30', status: 'Succès' },
+  { id: 'TX-9033', type: 'APPRO_AGENT', sender: 'Super Agent Blive Kivu', receiver: 'Blive Express - Kiosque #45', amount: 1500, currency: 'USD', date: 'Aujourd\'hui, 09:32', status: 'Succès' },
+  { id: 'TX-9034', type: 'DEPOT', sender: 'Blive Express - Kiosque #45', receiver: 'Jean Dupont', amount: 100000, currency: 'FC', date: 'Aujourd\'hui, 10:15', status: 'Succès' },
+  { id: 'TX-9035', type: 'DEPOT', sender: 'Blive Express - Kiosque #45', receiver: 'Jean Dupont', amount: 150, currency: 'USD', date: 'Aujourd\'hui, 10:18', status: 'Succès' },
+  { id: 'TX-9036', type: 'ENVOI', sender: 'Jean Dupont', receiver: 'Marie Kabange', amount: 25000, currency: 'FC', date: 'Aujourd\'hui, 11:00', status: 'Succès' },
+  { id: 'TX-9037', type: 'ENVOI', sender: 'Jean Dupont', receiver: 'Marie Kabange', amount: 40, currency: 'USD', date: 'Aujourd\'hui, 11:05', status: 'Succès' },
+  { id: 'TX-9038', type: 'PAIEMENT_MARCHAND', sender: 'Marie Kabange', receiver: 'Alimentation du Centre & Fils', amount: 15000, currency: 'FC', date: 'Aujourd\'hui, 11:24', status: 'Succès' },
+  { id: 'TX-9039', type: 'PAIEMENT_MARCHAND', sender: 'Marie Kabange', receiver: 'Alimentation du Centre & Fils', amount: 15, currency: 'USD', date: 'Aujourd\'hui, 11:26', status: 'Succès' }
+];
 
-        let db, auth, userId;
-        let isLocalMode = false; // Flag to check if we are running without Firebase setup
+// Configuration Supabase fournie
+const SUPABASE_URL = "https://tifqpzyyqdsjqpmoksly.supabase.co";
+const SUPABASE_KEY = "sb_publishable_EBS9bNt8fffPsw8CVJ5EsA_3xUY3-8X";
 
-        // --- FIXED PAYMENT RECIPIENT ---
-        const RECIPIENT_PHONE = "+243978415814";
+// Initialisation du client Supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- TRANSLATION DATA ---
-        const translations = {
-            en: {
-                app_subtitle: "Kinshasa Payment Gateway (DRC)",
-                section_title: "Complete Your Payment",
-                label_amount: "Amount to Pay",
-                label_operator: "Choose Mobile Money Operator",
-                btn_proceed: "Proceed to Payment",
-                modal_title: "Confirm Mobile Money",
-                modal_info_pay_for: "Payment for:",
-                modal_info_via: "Via:",
-                label_phone: "Your Mobile Number",
-                phone_placeholder: "e.g., 81 XXX XX XX",
-                modal_status_initial: (op) => `Enter your ${op} number to confirm the transaction.`,
-                modal_status_wait: "Waiting for PIN confirmation on your phone...",
-                modal_status_tip: "A security prompt is usually sent via SMS or USSD.",
-                status_success: "Transaction Successful!",
-                status_failed: "Transaction Failed. Try again.",
-                btn_confirm: "Confirm Payment",
-                btn_processing: "Processing...",
-                btn_completed: "Completed",
-                btn_cancel: "Cancel",
-                btn_close: "Close",
-                status_phone_error: "Please enter a valid phone number (minimum 9 digits).",
-                auth_loading: "Authenticating...",
-                auth_user_id: "User ID:",
-                auth_anon_id: "Anon ID:",
-                local_mode_warning: "Local Mode: DB logging disabled. UI is active.", // New
-            },
-            fr: {
-                app_subtitle: "Passerelle de Paiement Kinshasa (RDC)",
-                section_title: "Finalisez Votre Paiement",
-                label_amount: "Montant à Payer",
-                label_operator: "Choisissez l'Opérateur Mobile Money",
-                btn_proceed: "Passer au Paiement",
-                modal_title: "Confirmez Mobile Money",
-                modal_info_pay_for: "Paiement pour :",
-                modal_info_via: "Via :",
-                label_phone: "Votre Numéro de Téléphone",
-                phone_placeholder: "ex., 81 XXX XX XX",
-                modal_status_initial: (op) => `Entrez votre numéro ${op} pour confirmer la transaction.`,
-                modal_status_wait: "En attente de la confirmation PIN sur votre téléphone...",
-                modal_status_tip: "Une invite de sécurité est généralement envoyée par SMS ou USSD.",
-                status_success: "Transaction Réussie !",
-                status_failed: "Échec de la Transaction. Réessayez.",
-                btn_confirm: "Confirmer le Paiement",
-                btn_processing: "Traitement en cours...",
-                btn_completed: "Terminé",
-                btn_cancel: "Annuler",
-                btn_close: "Fermer",
-                status_phone_error: "Veuillez entrer un numéro de téléphone valide (minimum 9 chiffres).",
-                auth_loading: "Authentification...",
-                auth_user_id: "ID Utilisateur :",
-                auth_anon_id: "ID Anonyme :",
-                local_mode_warning: "Mode Local: L'enregistrement en DB est désactivé. L'interface est active.", // New
-            },
-            sw: {
-                app_subtitle: "Lango la Malipo Kinshasa (RDC)",
-                section_title: "Kamilisha Malipo Yako",
-                label_amount: "Kiasi cha Kulipa",
-                label_operator: "Chagua Huduma ya Mobile Money",
-                btn_proceed: "Endelea Kulipa",
-                modal_title: "Thibitisha Mobile Money",
-                modal_info_pay_for: "Malipo kwa:",
-                modal_info_via: "Kupitia:",
-                label_phone: "Namba Yako ya Simu",
-                phone_placeholder: "mf., 81 XXX XX XX",
-                modal_status_initial: (op) => `Ingiza namba yako ${op} ili kuthibitisha muamala.`,
-                modal_status_wait: "Inasubiri uthibitisho wa PIN kwenye simu yako...",
-                modal_status_tip: "Ujumbe wa usalama hutumwa kwa kawaida kupitia SMS au USSD.",
-                status_success: "Muamala Umefanikiwa!",
-                status_failed: "Muamala Umefeli. Jaribu tena.",
-                btn_confirm: "Thibitisha Malipo",
-                btn_processing: "Inachakata...",
-                btn_completed: "Imekamilika",
-                btn_cancel: "Ghairi",
-                btn_close: "Funga",
-                status_phone_error: "Tafadhali ingiza namba ya simu sahihi (angalau tarakimu 9).",
-                auth_loading: "Inathibitisha...",
-                auth_user_id: "Kitambulisho cha Mtumiaji:",
-                auth_anon_id: "Kitambulisho cha Anon:",
-                local_mode_warning: "Hali ya Karibu: Kuweka kumbukumbu kwa DB kumezimwa. UI inafanya kazi.", // New
-            }
+function App() { 
+  const [dbConnected, setDbConnected] = useState(false);
+  const [users, setUsers] = useState({});
+  const [transactions, setTransactions] = useState([]);
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | phones | register
+  const [selectedUserInspector, setSelectedUserInspector] = useState('tresor'); 
+  const [systemAlerts, setSystemAlerts] = useState([
+    { id: 1, text: "Initialisation du cloud Supabase (Mode HTTP Polling activé)...", type: "info" }
+  ]);
+  
+  // UI States per Phone
+  const [phoneStates, setPhoneStates] = useState({
+    tresor: { screen: 'home', pin: '', enteredAmount: '', enteredTarget: '', error: '', notification: null },
+    superAgent: { screen: 'home', pin: '', enteredAmount: '', enteredTarget: '', error: '', notification: null },
+    agent: { screen: 'home', pin: '', enteredAmount: '', enteredTarget: '', error: '', notification: null },
+    merchant: { screen: 'home', pin: '', enteredAmount: '', enteredTarget: '', error: '', notification: null },
+    clientA: { screen: 'home', pin: '', enteredAmount: '', enteredTarget: '', error: '', notification: null },
+    clientB: { screen: 'home', pin: '', enteredAmount: '', enteredTarget: '', error: '', notification: null }
+  });
+
+  const [editUserId, setEditUserId] = useState(null);
+  const [editFC, setEditFC] = useState(0);
+  const [editUSD, setEditUSD] = useState(0);
+  const [editPinValue, setEditPinValue] = useState('');
+  const [showPins, setShowPins] = useState(false);
+
+  const addSystemAlert = (text, type = "info") => {
+    const id = Date.now();
+    setSystemAlerts(prev => [{ id, text, type }, ...prev.slice(0, 11)]);
+  };
+
+  // 1. Fetching logic from Supabase DB
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase.from('users').select('*');
+      if (error) throw error;
+      
+      const loadedUsers = {};
+      data.forEach(u => {
+        loadedUsers[u.user_key] = {
+          id: u.id,
+          role: u.role,
+          name: u.name,
+          phone: u.phone,
+          balanceFC: parseFloat(u.balance_fc) || 0,
+          balanceUSD: parseFloat(u.balance_usd) || 0,
+          commissionFC: parseFloat(u.commission_fc) || 0,
+          commissionUSD: parseFloat(u.commission_usd) || 0,
+          status: u.status,
+          code: u.code,
+          merchantCode: u.merchant_code
         };
+      });
+      setUsers(loadedUsers);
+      setDbConnected(true);
+    } catch (e) {
+      console.error("Erreur de récupération des utilisateurs:", e);
+    }
+  };
 
-        let currentLang = 'fr'; // Default to French as it's the official language in Kinshasa
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('timestamp', { ascending: false });
+      if (error) throw error;
+      setTransactions(data);
+    } catch (e) {
+      console.error("Erreur de récupération des transactions:", e);
+    }
+  };
 
-        /**
-         * Updates all visible text elements based on the selected language.
-         */
-        function updateText() {
-            const lang = document.getElementById('lang-selector').value;
-            currentLang = lang;
-            const t = translations[lang];
+  // Raccourci pour rafraîchir l'ensemble de l'interface utilisateur après une action
+  const triggerSync = async () => {
+    await fetchUsers();
+    await fetchTransactions();
+  };
 
-            // Update elements with data-i18n attributes
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (t[key]) {
-                    el.textContent = t[key];
-                }
-            });
+  // 2. Database seeding function if empty
+  const seedDatabaseIfEmpty = async () => {
+    try {
+      const { count, error } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      if (error) throw error;
 
-            // Update placeholder/form labels
-            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-                const key = el.getAttribute('data-i18n-placeholder');
-                if (t[key]) {
-                    el.placeholder = t[key];
-                }
-            });
-            
-            // Re-run phone status setup if modal is open to update dynamic text
-            const modal = document.getElementById('payment-modal');
-            if (!modal.classList.contains('hidden')) {
-                const operator = document.getElementById('operator').value;
-                const statusElement = document.getElementById('modal-status');
-                 if (statusElement.getAttribute('data-status') === 'initial') {
-                    statusElement.innerHTML = `<div class="text-center text-sm mb-4 text-gray-600">${t.modal_status_initial(operator)}</div>`;
-                 }
-            }
-            
-            // Re-set User ID display after language change
-             const idDisplay = document.getElementById('user-id-display');
-             if (isLocalMode) {
-                 idDisplay.textContent = t.local_mode_warning;
-             } else if (auth && auth.currentUser) {
-                const prefix = auth.currentUser.isAnonymous ? t.auth_anon_id : t.auth_user_id;
-                idDisplay.textContent = `${prefix} ${userId}`;
-            }
-        }
-
-        /**
-         * Initializes Firebase or falls back to local mode.
-         */
-        async function initializeFirebase() {
-            const payButton = document.getElementById('pay-button');
-            const idDisplay = document.getElementById('user-id-display');
-            const t = translations[currentLang];
-
-            // Check if running in a secure environment (where config is provided)
-            if (Object.keys(firebaseConfig).length === 0) {
-                // --- LOCAL MODE FALLBACK ---
-                console.warn("ATTENTION: Configuration Firebase manquante. L'application est en Mode Local de Test.");
-                isLocalMode = true;
-                userId = 'LOCAL_USER_ID'; 
-                idDisplay.textContent = t.local_mode_warning;
-                payButton.disabled = false; // Enable button for local testing
-                updateText();
-                return; // Exit the function, bypass real Firebase initialization
-            }
-
-            // --- STANDARD EXECUTION PATH (Inside Canvas/Secure Environment) ---
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                onAuthStateChanged(auth, (user) => {
-                    userId = user ? user.uid : crypto.randomUUID();
-                    console.log("Firebase Auth State Changed. Current User ID:", userId);
-                    
-                    const prefix = user && user.isAnonymous ? t.auth_anon_id : t.auth_user_id;
-                    idDisplay.textContent = `${prefix} ${userId}`;
-                    
-                    // Now that auth is ready, enable the Pay button
-                    payButton.disabled = false;
-                    updateText(); // Ensure initial text is set after auth
-                });
-            } catch (error) {
-                console.error("Firebase initialization or authentication failed:", error);
-                payButton.disabled = true;
-                idDisplay.textContent = `ERREUR: Échec du chargement de Firebase.`;
-            }
-        }
+      if (count === 0) {
+        addSystemAlert("Aucun compte trouvé. Initialisation automatique de Supabase...", "info");
         
-        // --- TRANSACTION LOGGING FUNCTION ---
-        /**
-         * Logs a simulated transaction to Firestore (or console in local mode).
-         */
-        async function logTransaction(transactionDetails) {
-            if (isLocalMode) {
-                // Local Mode: Log to console instead of Firestore
-                console.log("--- TRANSACTION LOG (LOCAL MODE) ---");
-                console.log({
-                    ...transactionDetails,
-                    userId: 'LOCAL_USER_ID', 
-                    timestamp: new Date().toISOString(),
-                    logType: 'LOCAL_SIMULATION',
-                    warning: "DATA NOT SENT TO FIREBASE"
-                });
-                console.log("-------------------------------------");
-                return;
-            }
+        // Feed users
+        const usersToInsert = Object.entries(INITIAL_USERS).map(([key, u]) => ({
+          id: u.id,
+          user_key: key,
+          name: u.name,
+          phone: u.phone,
+          role: u.role,
+          balance_fc: u.balanceFC,
+          balance_usd: u.balanceUSD,
+          commission_fc: u.commissionFC,
+          commission_usd: u.commissionUSD,
+          status: u.status,
+          code: u.code,
+          merchant_code: u.merchantCode || null
+        }));
 
-            if (!db || !userId) {
-                console.error("Firestore or User ID is not ready (non-local mode failed).");
-                return;
-            }
+        const { error: userSeedError } = await supabase.from('users').insert(usersToInsert);
+        if (userSeedError) throw userSeedError;
 
-            // Using public data path for shared transaction log
-            const transactionsCollectionRef = collection(db, "artifacts", appId, "public", "data", "transactions");
+        // Feed transactions
+        const txsToInsert = INITIAL_TRANSACTIONS.map((tx, idx) => ({
+          id: tx.id,
+          type: tx.type,
+          sender: tx.sender,
+          receiver: tx.receiver,
+          amount: tx.amount,
+          currency: tx.currency,
+          fees: tx.fees || 0,
+          date: tx.date,
+          status: tx.status,
+          timestamp: Date.now() - (idx * 60000)
+        }));
 
-            try {
-                const docRef = await addDoc(transactionsCollectionRef, {
-                    ...transactionDetails,
-                    userId: userId, 
-                    timestamp: serverTimestamp(),
-                    language: currentLang, // Log the language used for the transaction
-                    location: "Kinshasa, DRC",
-                    gatewayName: "BANIKI LABS Payment Gateway"
-                });
-                console.log("Transaction logged successfully with ID:", docRef.id);
-            } catch (e) {
-                console.error("Error adding transaction document:", e);
-            }
+        const { error: txSeedError } = await supabase.from('transactions').insert(txsToInsert);
+        if (txSeedError) throw txSeedError;
+
+        addSystemAlert("Supabase initialisé avec succès !", "success");
+      }
+      
+      await triggerSync();
+    } catch (e) {
+      console.error("Échec du seeding initial:", e);
+    }
+  };
+
+  // 3. Setup polling intervals to query Supabase (WebSocket fallback secure mode)
+  useEffect(() => {
+    // Initial connection
+    seedDatabaseIfEmpty();
+
+    // Au lieu d'utiliser WebSocket (qui est bloqué dans Canvas),
+    // nous utilisons un système de polling rapide et stable toutes les 2.5 secondes.
+    const syncInterval = setInterval(() => {
+      fetchUsers();
+      fetchTransactions();
+    }, 2500);
+
+    addSystemAlert("Mode sécurisé HTTP Polling actif. Données synchronisées toutes les 2.5s.", "success");
+
+    return () => {
+      clearInterval(syncInterval);
+    };
+  }, []);
+
+  const triggerSMS = (userKey, text) => {
+    setPhoneStates(prev => ({
+      ...prev,
+      [userKey]: {
+        ...prev[userKey],
+        notification: {
+          id: Date.now(),
+          text: text
         }
+      }
+    }));
+    setTimeout(() => {
+      setPhoneStates(prev => ({
+        ...prev,
+        [userKey]: { ...prev[userKey], notification: null }
+      }));
+    }, 7000);
+  };
 
-        // --- GATEWAY LOGIC ---
-        window.onload = function() {
-            
-            // Attach language selector listener
-            document.getElementById('lang-selector').addEventListener('change', updateText);
-            
-            // Set initial loading text
-            document.getElementById('user-id-display').textContent = translations[currentLang].auth_loading;
+  const startEditing = (userKey, fc, usd, pin) => {
+    setEditUserId(userKey);
+    setEditFC(fc);
+    setEditUSD(usd);
+    setEditPinValue(pin);
+  };
 
-            // Initialize Firebase or local mode
-            initializeFirebase();
-            
-            const paymentForm = document.getElementById('payment-form');
-            const payButton = document.getElementById('pay-button');
-            const paymentModal = document.getElementById('payment-modal');
-            const modalStatus = document.getElementById('modal-status');
-            const modalPhoneInput = document.getElementById('modal-phone');
-            const modalPayButton = document.getElementById('modal-pay-button');
-            const modalCloseButton = document.getElementById('modal-close-button');
+  // Safe Supabase writers
+  const writeUserDoc = async (userKey, updatedData) => {
+    const dbData = {};
+    if (updatedData.code !== undefined) dbData.code = updatedData.code;
+    if (updatedData.balanceFC !== undefined) dbData.balance_fc = updatedData.balanceFC;
+    if (updatedData.balanceUSD !== undefined) dbData.balance_usd = updatedData.balanceUSD;
+    if (updatedData.commissionFC !== undefined) dbData.commission_fc = updatedData.commissionFC;
+    if (updatedData.commissionUSD !== undefined) dbData.commission_usd = updatedData.commissionUSD;
+    if (updatedData.status !== undefined) dbData.status = updatedData.status;
 
-            let currentTransaction = {};
-            
-            // Set up currency selector options
-            document.getElementById('currency').value = 'CDF'; 
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update(dbData)
+        .eq('user_key', userKey);
+      if (error) throw error;
+      
+      // Force instant local sync
+      await triggerSync();
+    } catch (e) {
+      console.error("Erreur de mise à jour Supabase:", e);
+      addSystemAlert("Erreur de sauvegarde Supabase.", "warning");
+    }
+  };
 
-            // Event listener to open the modal
-            paymentForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                const t = translations[currentLang];
-                const amount = parseFloat(document.getElementById('amount').value);
-                const currency = document.getElementById('currency').value;
-                const operator = document.getElementById('operator').value;
+  const writeTxDoc = async (txObj) => {
+    try {
+      const { error } = await supabase.from('transactions').insert([{
+        id: txObj.id,
+        type: txObj.type,
+        sender: txObj.sender,
+        receiver: txObj.receiver,
+        amount: txObj.amount,
+        currency: txObj.currency,
+        fees: txObj.fees || 0,
+        date: txObj.date,
+        status: txObj.status,
+        timestamp: Date.now()
+      }]);
+      if (error) throw error;
+      
+      // Force instant local sync
+      await triggerSync();
+    } catch (e) {
+      console.error("Erreur insertion transaction Supabase:", e);
+    }
+  };
 
-                if (isNaN(amount) || amount <= 0) {
-                     showTemporaryMessage(t.status_phone_error.replace('(minimum 9 digits)', ''), 'bg-red-500');
-                     return;
-                }
-                
-                // Conserve le numéro du destinataire pour le logging Firestore
-                currentTransaction = { amount, currency, operator, recipientPhone: RECIPIENT_PHONE };
-                
-                // Update modal display (sans le numéro du destinataire)
-                document.getElementById('modal-amount').textContent = `${amount.toFixed(2)} ${currency}`;
-                document.getElementById('modal-operator-name').textContent = operator;
-                modalStatus.innerHTML = `<div class="text-center text-sm mb-4 text-gray-600">${t.modal_status_initial(operator)}</div>`;
-                modalStatus.setAttribute('data-status', 'initial');
-                modalPhoneInput.value = ""; // Clear previous phone number
-                modalPhoneInput.disabled = false;
-                modalPayButton.disabled = false;
-                modalPayButton.textContent = t.btn_confirm;
-                modalCloseButton.textContent = t.btn_cancel;
-                
-                paymentModal.classList.remove('hidden');
-                
-            });
-            
-            // Event listener for payment simulation inside the modal
-            modalPayButton.addEventListener('click', async () => {
-                const t = translations[currentLang];
-                const phoneNumber = modalPhoneInput.value.trim();
-                
-                if (phoneNumber.length < 9) {
-                    modalStatus.innerHTML = `<span class="text-red-600">${t.status_phone_error}</span>`;
-                    return;
-                }
-                
-                modalPhoneInput.disabled = true;
-                modalPayButton.disabled = true;
-                modalPayButton.textContent = t.btn_processing;
-                modalStatus.innerHTML = `<div class="text-center">
-                    <svg class="animate-spin h-5 w-5 mr-3 inline text-blue-500" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    ${t.modal_status_wait}
-                    <p class="text-xs mt-2 text-gray-500">${t.modal_status_tip}</p>
-                </div>`;
-                modalStatus.setAttribute('data-status', 'pending');
-                
-                // Simulate network delay and processing (2-4 seconds)
-                const delay = Math.random() * 2000 + 2000;
-                
-                await new Promise(resolve => setTimeout(resolve, delay));
-                
-                // Simulate success 90% of the time, failure 10%
-                const success = Math.random() > 0.1;
-                
-                // Extract current transaction details, which includes the recipientPhone
-                const transactionResult = {
-                    ...currentTransaction,
-                    userPhone: phoneNumber, // Rename for clarity in log
-                    status: success ? 'SUCCESS' : 'FAILED',
-                    transactionId: `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-                };
-                
-                if (success) {
-                    modalStatus.innerHTML = `<div class="text-center text-green-600 font-bold text-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>${t.status_success}</div>`;
-                    modalPayButton.textContent = t.btn_completed;
-                    modalCloseButton.textContent = t.btn_close;
-                    modalStatus.setAttribute('data-status', 'success');
-                    
-                    // Log the successful transaction to Firestore / Console
-                    await logTransaction(transactionResult);
-                    
-                } else {
-                    modalStatus.innerHTML = `<div class="text-center text-red-600 font-bold text-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>${t.status_failed}</div>`;
-                    modalPayButton.textContent = t.btn_confirm;
-                    modalPayButton.disabled = false; // Allow retrying
-                    modalStatus.setAttribute('data-status', 'failed');
-                    
-                    // Log the failed transaction to Firestore / Console
-                    await logTransaction(transactionResult);
-                }
-            });
-            
-            // Event listener to close the modal
-            modalCloseButton.addEventListener('click', () => {
-                paymentModal.classList.add('hidden');
-            });
+  const saveBalances = async (userKey) => {
+    const updatedFields = {
+      code: editPinValue,
+      balanceFC: parseFloat(editFC) || 0,
+      balanceUSD: parseFloat(editUSD) || 0
+    };
+    await writeUserDoc(userKey, updatedFields);
+    addSystemAlert(`Soldes mis à jour pour ${users[userKey]?.name}`, "info");
+    setEditUserId(null);
+  };
 
-            // Utility function for temporary messages
-            function showTemporaryMessage(message, bgColor) {
-                const msgBox = document.getElementById('temp-message');
-                msgBox.textContent = message;
-                msgBox.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
-                setTimeout(() => {
-                    msgBox.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 opacity-0 transition-opacity duration-300`;
-                }, 3000);
-            }
-        };
+  const toggleUserStatus = async (userKey) => {
+    const u = users[userKey];
+    if (!u) return;
+    const newStatus = u.status === 'Actif' ? 'Bloqué' : 'Actif';
+    await writeUserDoc(userKey, { status: newStatus });
+    addSystemAlert(`L'utilisateur ${u.name} est désormais ${newStatus}.`, newStatus === 'Bloqué' ? "warning" : "success");
+  };
 
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fb; /* Light background for clean look */
-        }
-        .baniki-gradient {
-            background-image: linear-gradient(to right top, #0077B6, #00B4D8, #48CAE4); /* Blue theme: DRC National Colors (Blue) */
-        }
-        .shadow-baniki {
-            box-shadow: 0 10px 15px -3px rgba(0, 119, 182, 0.2), 0 4px 6px -2px rgba(0, 119, 182, 0.1);
-        }
-    </style>
-</head>
-<body>
+  const handleRegisterUser = async (formData) => {
+    const { name, phone, pin } = formData;
+    const userKey = `user_${Date.now()}`;
+    const newUser = {
+      id: `CL_${Math.floor(1000 + Math.random() * 9000)}`,
+      user_key: userKey,
+      role: 'client',
+      name: name,
+      phone: phone,
+      balance_fc: 0,
+      balance_usd: 0,
+      status: 'Actif',
+      code: pin
+    };
     
-    <!-- Header Controls -->
-    <div class="absolute top-2 right-2 flex items-center space-x-2 p-1">
-        <!-- Language Selector -->
-        <select id="lang-selector" class="bg-white border border-gray-300 text-gray-700 text-xs rounded-lg p-1.5 focus:ring-blue-500 focus:border-blue-500" value="fr">
-            <option value="fr">Français (FR)</option>
-            <option value="en">English (EN)</option>
-            <option value="sw">Kiswahili (SW)</option>
-        </select>
-         <!-- User ID Display -->
-        <div id="user-id-display" class="text-xs text-gray-500 bg-gray-100 p-1 rounded-md">
-            Authentification...
+    try {
+      const { error } = await supabase.from('users').insert([newUser]);
+      if (error) throw error;
+      addSystemAlert(`Nouvel utilisateur enregistré : ${name} (${phone})`, "success");
+      await triggerSync();
+      setActiveTab('dashboard');
+    } catch (e) {
+      console.error("Erreur d'inscription Supabase:", e);
+      addSystemAlert("Erreur de création de compte sur le Cloud.", "warning");
+    }
+  };
+
+  // Exclusive Admin/Treasury Action: Money Minting
+  const handleTresorMintMoney = async (amount, currency, pin) => {
+    const amt = parseFloat(amount);
+    const tresor = users.tresor;
+    if (!tresor) return { success: false, msg: "Trésor non initialisé." };
+    if (!amt || amt <= 0) return { success: false, msg: "Montant invalide." };
+    if (tresor.status !== 'Actif') return { success: false, msg: "Action impossible : Trésor bloqué." };
+    if (tresor.code !== pin) return { success: false, msg: "Code PIN Trésor incorrect." };
+
+    const updatedBalance = currency === 'FC' 
+      ? tresor.balanceFC + amt 
+      : tresor.balanceUSD + amt;
+
+    const fieldsToUpdate = currency === 'FC' 
+      ? { balanceFC: updatedBalance } 
+      : { balanceUSD: updatedBalance };
+
+    await writeUserDoc('tresor', fieldsToUpdate);
+
+    const newTx = {
+      id: generateTxId(),
+      type: 'MINT_MONNAIE',
+      sender: 'BCC (Banque Centrale)',
+      receiver: 'Vodacom Trésor',
+      amount: amt,
+      currency: currency,
+      date: 'À l\'instant',
+      status: 'Succès'
+    };
+    await writeTxDoc(newTx);
+
+    triggerSMS('tresor', `Blive : Création de monnaie réussie. +${amt.toLocaleString()} ${currency} injectés dans le Trésor Banikilabs.`);
+    addSystemAlert(`Frappe Monétaire : Vodacom Trésor a émis ${amt.toLocaleString()} ${currency} de monnaie électronique.`, "success");
+
+    return { success: true };
+  };
+
+  // Treasury Supplies Global Float to Super Agent
+  const handleTresorSupplySuperAgent = async (amount, currency, pin) => {
+    const amt = parseFloat(amount);
+    const tresor = users.tresor;
+    const superAgent = users.superAgent;
+    if (!tresor || !superAgent) return { success: false, msg: "Utilisateurs non initialisés." };
+    if (tresor.status !== 'Actif') return { success: false, msg: "Action impossible : Trésor bloqué." };
+    if (!amt || amt <= 0) return { success: false, msg: "Montant invalide." };
+    if (tresor.code !== pin) return { success: false, msg: "Code PIN Trésor incorrect." };
+
+    if (currency === 'FC') {
+      if (tresor.balanceFC < amt) return { success: false, msg: "Solde FC insuffisant dans le Trésor." };
+      await writeUserDoc('tresor', { balanceFC: tresor.balanceFC - amt });
+      await writeUserDoc('superAgent', { balanceFC: superAgent.balanceFC + amt });
+    } else {
+      if (tresor.balanceUSD < amt) return { success: false, msg: "Solde USD insuffisant dans le Trésor." };
+      await writeUserDoc('tresor', { balanceUSD: tresor.balanceUSD - amt });
+      await writeUserDoc('superAgent', { balanceUSD: superAgent.balanceUSD + amt });
+    }
+
+    const newTx = {
+      id: generateTxId(),
+      type: 'APPRO_SUPER_AGENT',
+      sender: tresor.name,
+      receiver: superAgent.name,
+      amount: amt,
+      currency: currency,
+      date: 'À l\'instant',
+      status: 'Succès'
+    };
+    await writeTxDoc(newTx);
+
+    triggerSMS('tresor', `Blive : Transfert de float de ${amt.toLocaleString()} ${currency} au Super Agent réussi.`);
+    triggerSMS('superAgent', `Blive : Votre réserve globale a été créditée de ${amt.toLocaleString()} ${currency} par le Trésor.`);
+    addSystemAlert(`Mise à disposition Float : Trésor a transféré ${amt.toLocaleString()} ${currency} au Super Agent Kivu.`, "info");
+
+    return { success: true };
+  };
+
+  // Super Agent Supplies Agent with Kiosk Float
+  const handleSuperAgentSupplyAgent = async (amount, currency, superPin) => {
+    const amt = parseFloat(amount);
+    const superAgent = users.superAgent;
+    const agent = users.agent;
+    if (!superAgent || !agent) return { success: false, msg: "Utilisateurs non configurés." };
+    if (superAgent.status !== 'Actif') return { success: false, msg: "Action impossible : Super Agent bloqué." };
+    if (agent.status !== 'Actif') return { success: false, msg: "Action impossible : Agent bloqué." };
+    if (!amt || amt <= 0) return { success: false, msg: "Montant invalide." };
+    if (superAgent.code !== superPin) return { success: false, msg: "Code PIN Super Agent incorrect." };
+
+    if (currency === 'FC') {
+      if (superAgent.balanceFC < amt) return { success: false, msg: "Solde Float FC insuffisant chez le Super Agent." };
+      await writeUserDoc('superAgent', { balanceFC: superAgent.balanceFC - amt });
+      await writeUserDoc('agent', { balanceFC: agent.balanceFC + amt });
+    } else {
+      if (superAgent.balanceUSD < amt) return { success: false, msg: "Solde Float USD insuffisant chez le Super Agent." };
+      await writeUserDoc('superAgent', { balanceUSD: superAgent.balanceUSD - amt });
+      await writeUserDoc('agent', { balanceUSD: agent.balanceUSD + amt });
+    }
+
+    const newTx = {
+      id: generateTxId(),
+      type: 'APPRO_AGENT',
+      sender: superAgent.name,
+      receiver: agent.name,
+      amount: amt,
+      currency: currency,
+      date: 'À l\'instant',
+      status: 'Succès'
+    };
+    await writeTxDoc(newTx);
+
+    triggerSMS('superAgent', `Blive SuperAgent : Transfert de float de ${amt.toLocaleString()} ${currency} à l'Agent réussi.`);
+    triggerSMS('agent', `Blive Agent : Votre compte a été approvisionné de ${amt.toLocaleString()} ${currency} par le Super Agent.`);
+    addSystemAlert(`Approvisionnement Agent : Super Agent a transféré ${amt.toLocaleString()} ${currency} de Float à l'Agent Kiosque #45.`, "success");
+
+    return { success: true };
+  };
+
+  // Client to Client Direct Transfer
+  const handleClientSendMoney = async (senderKey, receiverKey, amount, currency, pin) => {
+    const amt = parseFloat(amount);
+    const sender = users[senderKey];
+    const receiver = users[receiverKey];
+    const superAgent = users.superAgent;
+    const agent = users.agent;
+
+    if (!sender || !receiver || !superAgent || !agent) return { success: false, msg: "Base de données non prête." };
+    if (sender.status !== 'Actif') return { success: false, msg: "Action impossible : Votre compte est bloqué." };
+    if (receiver.status !== 'Actif') return { success: false, msg: "Action impossible : Destinataire bloqué." };
+    if (!amt || amt <= 0) return { success: false, msg: "Montant invalide." };
+    if (sender.code !== pin) return { success: false, msg: "Code PIN incorrect." };
+
+    // Standard simulated M-Pesa fee (1%)
+    const fees = Math.round(amt * 0.01 * 100) / 100;
+    const totalDeduction = amt + fees;
+
+    if (currency === 'FC') {
+      if (sender.balanceFC < totalDeduction) return { success: false, msg: `Solde FC insuffisant (Frais: ${fees} FC).` };
+      await writeUserDoc(senderKey, { balanceFC: sender.balanceFC - totalDeduction });
+      await writeUserDoc(receiverKey, { balanceFC: receiver.balanceFC + amt });
+      
+      // Share service commission fees (60% Super Agent, 40% Agent)
+      await writeUserDoc('superAgent', { commissionFC: superAgent.commissionFC + Math.round(fees * 0.6) });
+      await writeUserDoc('agent', { commissionFC: agent.commissionFC + Math.round(fees * 0.4) });
+    } else {
+      if (sender.balanceUSD < totalDeduction) return { success: false, msg: `Solde USD insuffisant (Frais: ${fees} USD).` };
+      await writeUserDoc(senderKey, { balanceUSD: sender.balanceUSD - totalDeduction });
+      await writeUserDoc(receiverKey, { balanceUSD: receiver.balanceUSD + amt });
+      
+      await writeUserDoc('superAgent', { commissionUSD: superAgent.commissionUSD + Math.round(fees * 0.6 * 100) / 100 });
+      await writeUserDoc('agent', { commissionUSD: agent.commissionUSD + Math.round(fees * 0.4 * 100) / 100 });
+    }
+
+    const newTx = {
+      id: generateTxId(),
+      type: 'ENVOI',
+      sender: sender.name,
+      receiver: receiver.name,
+      amount: amt,
+      currency: currency,
+      fees: fees,
+      date: 'À l\'instant',
+      status: 'Succès'
+    };
+    await writeTxDoc(newTx);
+
+    triggerSMS(senderKey, `Blive : Vous avez envoyé ${amt.toLocaleString()} ${currency} à ${receiver.name}. Frais: ${fees} ${currency}. Réf: ${newTx.id}`);
+    triggerSMS(receiverKey, `Blive Réception : Vous avez reçu ${amt.toLocaleString()} ${currency} de ${sender.name}. Réf: ${newTx.id}`);
+    addSystemAlert("Transaction Client : " + sender.name + " a envoyé " + amt.toLocaleString() + " " + currency + " à " + receiver.name + ".", "info");
+
+    return { success: true };
+  };
+
+  // Pay registered Merchant
+  const handlePayMerchant = async (senderKey, merchantCode, amount, currency, pin) => {
+    const amt = parseFloat(amount);
+    const sender = users[senderKey];
+    
+    const merchantKey = Object.keys(users).find(k => users[k].merchantCode === merchantCode);
+    if (!merchantKey) return { success: false, msg: "Code Marchand introuvable." };
+    if (sender.status !== 'Actif') return { success: false, msg: "Action impossible : Votre compte est bloqué." };
+    
+    const merchant = users[merchantKey];
+    const superAgent = users.superAgent;
+    const agent = users.agent;
+    const tresor = users.tresor;
+
+    if (!merchant || !superAgent || !agent || !tresor) return { success: false, msg: "Chargement..." };
+    if (!amt || amt <= 0) return { success: false, msg: "Montant invalide." };
+    if (sender.code !== pin) return { success: false, msg: "Code PIN incorrect." };
+
+    // Customers pay no fee. Merchants undergo a 0.5% deduction.
+    const merchantServiceFee = Math.round(amt * 0.005 * 100) / 100;
+    const netAmount = amt - merchantServiceFee;
+
+    if (currency === 'FC') {
+      if (sender.balanceFC < amt) return { success: false, msg: "Solde FC insuffisant." };
+      await writeUserDoc(senderKey, { balanceFC: sender.balanceFC - amt });
+      await writeUserDoc(merchantKey, { balanceFC: merchant.balanceFC + netAmount });
+      
+      // Distribute merchant commission across network actors
+      await writeUserDoc('superAgent', { commissionFC: superAgent.commissionFC + Math.round(merchantServiceFee * 0.5) });
+      await writeUserDoc('agent', { commissionFC: agent.commissionFC + Math.round(merchantServiceFee * 0.3) });
+      await writeUserDoc('tresor', { commissionFC: tresor.commissionFC + Math.round(merchantServiceFee * 0.2) });
+    } else {
+      if (sender.balanceUSD < amt) return { success: false, msg: "Solde USD insuffisant." };
+      await writeUserDoc(senderKey, { balanceUSD: sender.balanceUSD - amt });
+      await writeUserDoc(merchantKey, { balanceUSD: merchant.balanceUSD + netAmount });
+      
+      await writeUserDoc('superAgent', { commissionUSD: superAgent.commissionUSD + Math.round(merchantServiceFee * 0.5 * 100) / 100 });
+      await writeUserDoc('agent', { commissionUSD: agent.commissionUSD + Math.round(merchantServiceFee * 0.3 * 100) / 100 });
+      await writeUserDoc('tresor', { commissionUSD: tresor.commissionUSD + Math.round(merchantServiceFee * 0.2 * 100) / 100 });
+    }
+
+    const newTx = {
+      id: generateTxId(),
+      type: 'PAIEMENT_MARCHAND',
+      sender: sender.name,
+      receiver: merchant.name,
+      amount: amt,
+      currency: currency,
+      date: 'À l\'instant',
+      status: 'Succès'
+    };
+    await writeTxDoc(newTx);
+
+    triggerSMS(senderKey, `Blive : Paiement de ${amt.toLocaleString()} ${currency} chez ${merchant.name} effectué.`);
+    triggerSMS(merchantKey, `Blive Marchand : Paiement reçu de ${sender.name}. Brut: ${amt} ${currency}, Net: ${netAmount} ${currency}.`);
+    addSystemAlert("Achat Marchand : " + sender.name + " a réglé " + amt.toLocaleString() + " " + currency + " chez " + merchant.name + ".", "success");
+
+    return { success: true };
+  };
+
+  // Agent performs physical cash deposit (Cash-In) for a customer
+  const handleAgentCashIn = async (clientPhone, amount, currency, agentPin) => {
+    const amt = parseFloat(amount);
+    const agent = users.agent;
+    if (!agent) return { success: false, msg: "Agent non disponible." };
+    if (agent.status !== 'Actif') return { success: false, msg: "Action impossible : Agent bloqué." };
+    if (agent.code !== agentPin) return { success: false, msg: "Code PIN Agent incorrect." };
+    if (!amt || amt <= 0) return { success: false, msg: "Montant invalide." };
+
+    const clientKey = Object.keys(users).find(k => users[k].phone === clientPhone);
+    if (!clientKey) return { success: false, msg: "Client introuvable." };
+    const client = users[clientKey];
+    if (client.status !== 'Actif') return { success: false, msg: "Action impossible : Compte client bloqué." };
+
+    // Commission offered to Agent by Vodacom (1.5%)
+    const agentComm = Math.round(amt * 0.015 * 100) / 100;
+
+    if (currency === 'FC') {
+      if (agent.balanceFC < amt) return { success: false, msg: "Solde float FC de l'agent insuffisant." };
+      await writeUserDoc('agent', { 
+        balanceFC: agent.balanceFC - amt,
+        commissionFC: agent.commissionFC + agentComm
+      });
+      await writeUserDoc(clientKey, { balanceFC: client.balanceFC + amt });
+    } else {
+      if (agent.balanceUSD < amt) return { success: false, msg: "Solde float USD de l'agent insuffisant." };
+      await writeUserDoc('agent', { 
+        balanceUSD: agent.balanceUSD - amt,
+        commissionUSD: agent.commissionUSD + agentComm
+      });
+      await writeUserDoc(clientKey, { balanceUSD: client.balanceUSD + amt });
+    }
+
+    const newTx = {
+      id: generateTxId(),
+      type: 'DEPOT',
+      sender: agent.name,
+      receiver: client.name,
+      amount: amt,
+      currency: currency,
+      date: 'À l\'instant',
+      status: 'Succès'
+    };
+    await writeTxDoc(newTx);
+
+    triggerSMS('agent', `Blive Agent : Dépôt de ${amt.toLocaleString()} ${currency} réussi pour ${client.name}.`);
+    triggerSMS(clientKey, `Blive : Votre compte a été rechargé de ${amt.toLocaleString()} ${currency} par l'Agent ${agent.name}.`);
+    addSystemAlert("Dépôt Agent : Kiosque a rechargé le compte de " + client.name + " avec " + amt.toLocaleString() + " " + currency + ".", "info");
+
+    return { success: true };
+  };
+
+  // Agent processes physical cash withdrawal (Cash-Out) for a client
+  const handleAgentCashOut = async (clientPhone, amount, currency, agentPin) => {
+    const amt = parseFloat(amount);
+    const agent = users.agent;
+    const superAgent = users.superAgent;
+    const tresor = users.tresor;
+
+    if (!agent || !superAgent || !tresor) return { success: false, msg: "Chargement du réseau..." };
+    if (agent.status !== 'Actif') return { success: false, msg: "Action impossible : Agent bloqué." };
+    if (agent.code !== agentPin) return { success: false, msg: "Code PIN Agent incorrect." };
+    if (!amt || amt <= 0) return { success: false, msg: "Montant invalide." };
+
+    const clientKey = Object.keys(users).find(k => users[k].phone === clientPhone);
+    if (!clientKey) return { success: false, msg: "Client non trouvé." };
+    const client = users[clientKey];
+    if (client.status !== 'Actif') return { success: false, msg: "Action impossible : Compte client bloqué." };
+
+    // Standard cash withdrawal charge (2%)
+    const clientWithdrawFees = Math.round(amt * 0.02 * 100) / 100;
+    const totalClientCost = amt + clientWithdrawFees;
+
+    // Split fees: 50% Agent, 40% Super Agent, 10% Treasury
+    const agentComm = Math.round(clientWithdrawFees * 0.5 * 100) / 100;
+    const superAgentComm = Math.round(clientWithdrawFees * 0.4 * 100) / 100;
+    const tresorComm = Math.round(clientWithdrawFees * 0.1 * 100) / 100;
+
+    if (currency === 'FC') {
+      if (client.balanceFC < totalClientCost) {
+        return { success: false, msg: `Le client a un solde insuffisant (${client.balanceFC.toLocaleString()} FC) pour retirer ${amt.toLocaleString()} FC.` };
+      }
+      await writeUserDoc(clientKey, { balanceFC: client.balanceFC - totalClientCost });
+      await writeUserDoc('agent', { 
+        balanceFC: agent.balanceFC + amt,
+        commissionFC: agent.commissionFC + agentComm
+      });
+      await writeUserDoc('superAgent', { commissionFC: superAgent.commissionFC + superAgentComm });
+      await writeUserDoc('tresor', { commissionFC: tresor.commissionFC + tresorComm });
+    } else {
+      if (client.balanceUSD < totalClientCost) {
+        return { success: false, msg: `Le client a un solde insuffisant (${client.balanceUSD.toLocaleString()} USD) pour retirer ${amt.toLocaleString()} USD.` };
+      }
+      await writeUserDoc(clientKey, { balanceUSD: client.balanceUSD - totalClientCost });
+      await writeUserDoc('agent', { 
+        balanceUSD: agent.balanceUSD + amt,
+        commissionUSD: agent.commissionUSD + agentComm
+      });
+      await writeUserDoc('superAgent', { commissionUSD: superAgent.commissionUSD + superAgentComm });
+      await writeUserDoc('tresor', { commissionUSD: tresor.commissionUSD + tresorComm });
+    }
+
+    const newTx = {
+      id: generateTxId(),
+      type: 'RETRAIT',
+      sender: client.name,
+      receiver: agent.name,
+      amount: amt,
+      currency: currency,
+      date: 'À l\'instant',
+      status: 'Succès'
+    };
+    await writeTxDoc(newTx);
+
+    triggerSMS(clientKey, `Blive : Retrait de ${amt.toLocaleString()} ${currency} réussi chez ${agent.name}.`);
+    triggerSMS('agent', `Blive Agent : Retrait de ${amt.toLocaleString()} ${currency} par ${client.name} validé.`);
+    addSystemAlert("Retrait d'Espèces : " + client.name + " a retiré " + amt.toLocaleString() + " " + currency + " au Kiosque #45.", "warning");
+
+    return { success: true };
+  };
+
+  // Generate automated random demo transactions in real-time
+  const handleSimulateRandomTx = () => {
+    const isUSD = Math.random() > 0.5;
+    const currency = isUSD ? 'USD' : 'FC';
+    const amount = isUSD ? Math.floor(5 + Math.random() * 45) : Math.floor(5000 + Math.random() * 20000);
+
+    if (Math.random() > 0.5) {
+      handleClientSendMoney('clientA', 'clientB', amount, currency, '1234');
+    } else {
+      handlePayMerchant('clientB', '882211', amount, currency, '5678');
+    }
+  };
+
+  // Prevent loading crashes if database has not returned values yet
+  if (Object.keys(users).length === 0) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col justify-center items-center">
+        <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-sm font-semibold tracking-wider text-slate-400">CONNEXION À LA BASE DE DONNÉES SUPABASE...</p>
+        <p className="text-xs text-slate-600 mt-2">Instantané URL : {SUPABASE_URL}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white flex flex-col font-sans antialiased">
+      {/* HEADER */}
+      <header className="border-b border-gray-800 bg-black/85 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-yellow-500 flex items-center justify-center font-bold text-black shadow-lg shadow-yellow-900/40">
+            B
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2"> 
+              Banikilabs Blive <span className="text-[10px] bg-yellow-500/25 text-yellow-400 border border-yellow-500/40 px-2.5 py-0.5 rounded-full font-bold">MULTIDEVISES SUPABASE</span>
+            </h1>
+            <p className="text-xs text-slate-400">Écosystème Congolais (USD / FC) • Sync Cloud Réseau Supabase via Polling HTTP</p>
+          </div>
         </div>
-    </div>
 
-    <!-- Temporary Message Box -->
-    <div id="temp-message" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-transparent text-white px-4 py-2 rounded-lg shadow-lg z-50 opacity-0 transition-opacity duration-300"></div>
+        {/* Tab Navigation */}
+        <div className="flex items-center space-x-2 bg-slate-850 p-1 rounded-xl border border-slate-700/60">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${activeTab === 'dashboard' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'}`}
+          >
+            <Activity className="w-4 h-4" />
+            Supervision Réseau
+          </button>
+          <button 
+            onClick={() => setActiveTab('phones')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${activeTab === 'phones' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'}`}
+          >
+            <Smartphone className="w-4 h-4" />
+            Les 6 Terminaux Connectés
+          </button>
+          <button 
+            onClick={() => setActiveTab('register')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${activeTab === 'register' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'}`}
+          >
+            <PlusCircle className="w-4 h-4" />
+            Ouvrir un Compte
+          </button>
+        </div>
 
-    <!-- Main Payment Container -->
-    <div class="min-h-screen flex items-center justify-center p-4">
-        <div class="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden shadow-baniki">
+        {/* Global Controls */}
+        <div className="flex items-center gap-3">
+          {dbConnected && (
+            <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Supabase Polling Actif
+            </span>
+          )}
+          <button
+            onClick={handleSimulateRandomTx}
+            className="px-3.5 py-1.5 rounded-lg text-xs bg-yellow-500 hover:bg-yellow-400 text-black font-medium flex items-center gap-1.5 transition-colors border border-yellow-400/40 shadow-sm"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Simuler Flux (USD/FC)
+          </button>
+        </div>
+      </header>
+
+      {/* MAIN CONTAINER */}
+      <main className="flex-1 p-6 flex flex-col gap-6 max-w-[1700px] mx-auto w-full">
+        
+        {/* TAB 1: NETWORK MONITOR / SUPERVISION */}
+        {activeTab === 'dashboard' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <!-- Header -->
-            <header class="baniki-gradient p-6 text-white text-center rounded-t-xl">
-                <h1 class="text-3xl font-extrabold tracking-tight">BANIKI LABS</h1>
-                <p id="app-subtitle" data-i18n="app_subtitle" class="text-sm opacity-90 mt-1">Passerelle de Paiement Kinshasa (RDC)</p>
-            </header>
-            
-            <!-- Body Content -->
-            <div class="p-6">
-                <h2 id="section-title" data-i18n="section_title" class="text-xl font-semibold text-gray-800 mb-4">Finalisez Votre Paiement</h2>
-                
-                <form id="payment-form" class="space-y-4">
-                    
-                    <!-- Amount Input -->
-                    <div>
-                        <label for="amount" data-i18n="label_amount" class="block text-sm font-medium text-gray-700">Montant à Payer</label>
-                        <div class="mt-1 flex rounded-lg shadow-sm">
-                            <input type="number" step="0.01" id="amount" value="5000" required class="flex-1 block w-full rounded-l-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-3 sm:text-sm">
-                            <select id="currency" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-r-lg focus:ring-blue-500 focus:border-blue-500 p-3">
-                                <option value="CDF">CDF (Congolese Franc)</option>
-                                <option value="USD">USD (US Dollar)</option>
-                            </select>
-                        </div>
+            {/* Left Column: Metrics & Global Directory */}
+            <div className="lg:col-span-8 flex flex-col gap-6">
+              
+              {/* Cloud Member Directory */}
+              <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-indigo-400" /> Annuaire Global du Réseau (Données Supabase)
+                  </h2>
+                  <span className="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-bold">
+                    {Object.keys(users).length} MEMBRES ACTIFS
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="text-[10px] text-slate-500 uppercase tracking-widest border-b border-gray-800">
+                        <th className="py-3 px-4">Utilisateur</th>
+                        <th className="py-3 px-4">Rôle</th>
+                        <th className="py-3 px-4">Téléphone</th>
+                        <th className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            PIN
+                            <button 
+                              onClick={() => setShowPins(!showPins)} 
+                              className="p-1 hover:bg-gray-800 rounded transition-colors text-slate-500 hover:text-yellow-500"
+                              title={showPins ? "Masquer" : "Afficher"}
+                            >
+                              {showPins ? <Key className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </th>
+                        <th className="py-3 px-4 text-right">Solde CDF</th>
+                        <th className="py-3 px-4 text-right">Solde USD</th>
+                        <th className="py-3 px-4 text-center">Statut</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800/40">
+                      {Object.entries(users).map(([userKey, u]) => (
+                        <tr key={u.id || userKey} className="hover:bg-white/5 transition-colors group items-center">
+                          <td className="py-3 px-4 font-bold text-slate-200 group-hover:text-yellow-500 transition-colors">{u.name}</td>
+                          <td className="py-3 px-4">
+                            <span className="text-[9px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 uppercase font-black">{u.role}</span>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-xs text-slate-400">{u.phone}</td>
+                          <td className="py-3 px-4 text-center font-mono">
+                            {editUserId === userKey ? (
+                              <input 
+                                type={showPins ? "text" : "password"} 
+                                maxLength={4}
+                                value={editPinValue} 
+                                onChange={e => setEditPinValue(e.target.value)}
+                                className="bg-black border border-gray-700 w-16 p-1 text-center text-[10px] rounded focus:border-yellow-500 outline-none"
+                              />
+                            ) : (
+                              showPins ? u.code : "****"
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold">
+                            {editUserId === userKey ? (
+                              <input 
+                                type="number" 
+                                value={editFC} 
+                                onChange={e => setEditFC(e.target.value)}
+                                className="bg-black border border-gray-700 w-24 p-1 text-right text-[10px] rounded focus:border-yellow-500 outline-none"
+                              />
+                            ) : (
+                              (u.balanceFC || 0).toLocaleString()
+                            )}
+                            <span className="text-slate-600 text-[10px] ml-1">FC</span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-emerald-500">
+                            {editUserId === userKey ? (
+                              <input 
+                                type="number" 
+                                value={editUSD} 
+                                onChange={e => setEditUSD(e.target.value)}
+                                className="bg-black border border-emerald-900 w-20 p-1 text-right text-[10px] rounded text-emerald-400 focus:border-emerald-500 outline-none"
+                              />
+                            ) : (
+                              (u.balanceUSD || 0).toLocaleString()
+                            )}
+                            <span className="text-slate-600 text-[10px] ml-1">$</span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className={`text-[8px] px-2 py-0.5 rounded font-black ${u.status === 'Actif' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                              {u.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right flex justify-end gap-2">
+                            {editUserId === userKey ? (
+                              <button 
+                                onClick={() => saveBalances(userKey)}
+                                className="text-[9px] font-bold px-2 py-1 rounded bg-yellow-500 text-black hover:bg-yellow-400 transition-colors"
+                              >
+                                Sauver
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => startEditing(userKey, u.balanceFC, u.balanceUSD, u.code)}
+                                className="text-[9px] font-bold px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+                              >
+                                Éditer
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => toggleUserStatus(userKey)}
+                              className={`text-[9px] font-bold px-2 py-1 rounded transition-colors ${u.status === 'Actif' ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'}`}
+                            >
+                              {u.status === 'Actif' ? 'Bloquer' : 'Activer'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Dynamic Information Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-gray-900 to-gray-850 p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Masse Monétaire FC</span>
+                    <Coins className="w-5 h-5 text-yellow-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-white">
+                      {Object.values(users).reduce((acc, curr) => acc + (curr.balanceFC || 0), 0).toLocaleString()} <span className="text-xs font-normal text-slate-400">FC</span>
+                    </h3>
+                    <p className="text-[10px] text-slate-500 mt-1">Total CDF circulant sur l'écosystème cloud</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-gray-900 to-gray-850 p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Masse Monétaire USD</span>
+                    <DollarSign className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-emerald-400">
+                      {Object.values(users).reduce((acc, curr) => acc + (curr.balanceUSD || 0), 0).toLocaleString()} <span className="text-xs font-normal text-slate-400">$</span>
+                    </h3>
+                    <p className="text-[10px] text-slate-500 mt-1">Total Dollars US circulant sur l'écosystème cloud</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-gray-900 to-gray-850 p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Commissions cumulées FC</span>
+                    <TrendingUp className="w-5 h-5 text-yellow-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-white">
+                      {(((users.tresor?.commissionFC || 0) + (users.superAgent?.commissionFC || 0) + (users.agent?.commissionFC || 0))).toLocaleString()} <span className="text-xs font-normal text-slate-400">FC</span>
+                    </h3>
+                    <p className="text-[10px] text-slate-500 mt-1">Total des gains de service accumulés en Francs</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-gray-900 to-gray-850 p-5 rounded-2xl border border-gray-800 shadow-md flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Commissions cumulées USD</span>
+                    <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-emerald-400">
+                      {(((users.tresor?.commissionUSD || 0) + (users.superAgent?.commissionUSD || 0) + (users.agent?.commissionUSD || 0))).toLocaleString()} <span className="text-xs font-normal text-slate-400">$</span>
+                    </h3>
+                    <p className="text-[10px] text-slate-500 mt-1">Total des gains de service accumulés en Dollars</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Regulation and Financial Directives Panel */}
+              <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Landmark className="w-5 h-5 text-yellow-500" /> Régulation & Frappe Monétaire Cloud (BCC / Banikilabs)
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-black p-4 rounded-xl border border-gray-800">
+                    <p className="text-xs font-semibold text-slate-300 mb-1">Injecter capital dans le Trésor</p>
+                    <p className="text-[11px] text-slate-500 mb-3">Saisir de nouvelles devises virtuelles maîtresses dans les coffres régulateurs.</p>
+                    <div className="flex gap-1.5">
+                      <button 
+                        onClick={() => handleTresorMintMoney(5000000, 'FC', '9999')} 
+                        className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-1.5 px-2 rounded text-[10px] transition-colors flex items-center justify-center animate-pulse"
+                      >
+                        +5M FC
+                      </button>
+                      <button 
+                        onClick={() => handleTresorMintMoney(10000, 'USD', '9999')}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-1.5 px-2 rounded text-[10px] transition-colors flex items-center justify-center animate-pulse"
+                      >
+                        +10k USD
+                      </button>
                     </div>
-                    
-                    <!-- Mobile Money Operator Selection -->
-                    <div>
-                        <label for="operator" data-i18n="label_operator" class="block text-sm font-medium text-gray-700">Choisissez l'Opérateur Mobile Money</label>
-                        <select id="operator" required class="mt-1 block w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-3 shadow-sm">
-                            <option value="Vodacom M-Pesa">Vodacom M-Pesa</option>
-                            <option value="Airtel Money">Airtel Money</option>
-                            <option value="Orange Money">Orange Money</option>
-                            <option value="Afrimoney">Africell Afrimoney</option>
-                        </select>
+                  </div>
+
+                  <div className="bg-black p-4 rounded-xl border border-gray-800">
+                    <p className="text-xs font-semibold text-slate-300 mb-1">Approvisionner Super Agent</p>
+                    <p className="text-[11px] text-slate-500 mb-3">Déployer de la réserve de gros (Float) au distributeur M-Pesa Kivu.</p>
+                    <div className="flex gap-1.5">
+                      <button 
+                        onClick={() => handleTresorSupplySuperAgent(2500000, 'FC', '9999')}
+                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold py-1.5 px-2 rounded text-[10px] transition-colors"
+                      >
+                        2.5M FC Float
+                      </button>
+                      <button 
+                        onClick={() => handleTresorSupplySuperAgent(5000, 'USD', '9999')}
+                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold py-1.5 px-2 rounded text-[10px] transition-colors"
+                      >
+                        5k USD Float
+                      </button>
                     </div>
-                    
-                    <!-- Pay Button -->
-                    <button type="submit" id="pay-button" disabled data-i18n="btn_proceed" class="w-full baniki-gradient text-white font-bold py-3 px-4 rounded-lg hover:bg-opacity-90 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-                        Passer au Paiement
+                  </div>
+
+                  <div className="bg-black p-4 rounded-xl border border-gray-800">
+                    <p className="text-xs font-semibold text-slate-300 mb-1">Subventionner Clients (Jean)</p>
+                    <p className="text-[11px] text-slate-500 mb-3">Soutenir le compte d'essai de Jean Dupont par transfert instantané.</p>
+                    <div className="flex gap-1.5">
+                      <button 
+                        onClick={async () => {
+                          const val = (users.clientA?.balanceFC || 0) + 100000;
+                          await writeUserDoc('clientA', { balanceFC: val });
+                          addSystemAlert("Fonds injectés à distance : +100 000 FC sur le compte de Jean.", "success");
+                          triggerSMS('clientA', "Blive : Votre compte FC a été crédité de 100 000 FC par versement Trésor.");
+                        }}
+                        className="flex-1 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 font-semibold py-1.5 px-2 rounded text-[10px] transition-colors"
+                      >
+                        +100K FC
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          const val = (users.clientA?.balanceUSD || 0) + 100;
+                          await writeUserDoc('clientA', { balanceUSD: val });
+                          addSystemAlert("Fonds injectés à distance : +100 USD sur le compte de Jean.", "success");
+                          triggerSMS('clientA', "Blive : Votre compte USD a été crédité de 100 USD par versement Trésor.");
+                        }}
+                        className="flex-1 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 font-semibold py-1.5 px-2 rounded text-[10px] transition-colors"
+                      >
+                        +100 USD
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Live Transaction Ledger */}
+              <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2"> 
+                      <ArrowRightLeft className="w-5 h-5 text-yellow-500" /> Journal de l'audit financier global (Supabase Sync)
+                    </h2>
+                    <p className="text-xs text-slate-400">Registre décentralisé synchronisé en temps réel sur tous les terminaux connectés</p>
+                  </div>
+                  <span className="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded-full font-mono">
+                    {transactions.length} transactions
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto max-h-[380px] overflow-y-auto pr-1">
+                  <table className="w-full text-left border-collapse">
+                    <thead> 
+                      <tr className="border-b border-gray-800 text-gray-400 text-xs">
+                        <th className="py-3 px-4">Réf / Type</th>
+                        <th className="py-3 px-4">Provenance</th>
+                        <th className="py-3 px-4">Destinataire</th>
+                        <th className="py-3 px-4 text-right">Montant</th>
+                        <th className="py-3 px-4 text-center">Devise</th>
+                        <th className="py-3 px-4 text-center">Statut</th> 
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50">
+                      {transactions.map((tx) => (
+                        <tr key={tx.id} className="hover:bg-slate-800/30 transition-colors text-sm">
+                          <td className="py-3 px-4">
+                            <div className="font-mono text-xs text-red-400 font-bold">{tx.id}</div>
+                            <span className="text-[9px] text-gray-400 px-1.5 py-0.5 rounded bg-gray-800 font-medium">
+                              {tx.type}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-300">{tx.sender}</td>
+                          <td className="py-3 px-4 text-gray-300">{tx.receiver}</td>
+                          <td className="py-3 px-4 text-right font-bold text-white">
+                            {(tx.amount || 0).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-center"> 
+                            <span className={`text-xs font-extrabold px-1.5 py-0.5 rounded ${tx.currency === 'FC' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                              {tx.currency}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                              {tx.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column: Node Inspector & Network Logs */}
+            <div className="lg:col-span-4 flex flex-col gap-6">
+              
+              {/* Cloud Node Inspector */} 
+              <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 flex flex-col flex-1 min-h-[500px]">
+                <div className="border-b border-gray-800 pb-4 mb-4">
+                  <h2 className="text-md font-bold text-white flex items-center gap-2">
+                    <Database className="w-5 h-5 text-yellow-400" /> Blive Node Inspector (Supabase Mode)
+                  </h2>
+                  <p className="text-xs text-slate-400">Inspecter les variables d'un terminal en base de données.</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1 mb-4">
+                  {Object.keys(users).map((userKey) => (
+                    <button
+                      key={userKey}
+                      onClick={() => setSelectedUserInspector(userKey)}
+                      className={`text-[10px] py-1.5 rounded-md font-bold transition-all ${selectedUserInspector === userKey ? 'bg-yellow-500 text-black shadow' : 'bg-gray-850 hover:bg-gray-800 text-gray-400'}`}
+                    >
+                      {userKey === 'tresor' ? '👑 Trésor' : userKey === 'superAgent' ? '💼 SuperAgent' : userKey === 'agent' ? '🏪 Agent' : userKey === 'merchant' ? '🛒 Marchand' : userKey === 'clientA' ? '👤 Jean' : '👤 Marie'}
                     </button>
-                </form>
-            </div>
-        </div>
-    </div>
+                  ))}
+                </div>
 
-    <!-- Payment Modal Overlay -->
-    <div id="payment-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden transition-opacity duration-300">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4 transform transition-all">
-            
-            <h3 data-i18n="modal_title" class="text-xl font-bold text-gray-800 mb-2">Confirmez Mobile Money</h3>
-            
-            <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p class="text-sm font-semibold text-blue-800"><span data-i18n="modal_info_pay_for">Paiement pour :</span> <span id="modal-amount" class="text-lg"></span></p>
-                <p class="text-xs text-blue-600"><span data-i18n="modal_info_via">Via :</span> <span id="modal-operator-name"></span></p>
-            </div>
-            
-            <!-- Phone Number Input -->
-            <div class="mb-4">
-                <label for="modal-phone" data-i18n="label_phone" class="block text-sm font-medium text-gray-700">Votre Numéro de Téléphone</label>
-                <input type="tel" id="modal-phone" data-i18n-placeholder="phone_placeholder" placeholder="ex., 81 XXX XX XX" class="mt-1 block w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 p-3 shadow-sm" required>
-            </div>
-            
-            <!-- Status Message Area -->
-            <div id="modal-status" data-status="initial" class="text-center text-sm mb-4 text-gray-600">
-                Entrez votre numéro pour confirmer la transaction.
-            </div>
-            
-            <!-- Action Buttons -->
-            <div class="flex space-x-3">
-                <button id="modal-close-button" type="button" data-i18n="btn_cancel" class="flex-1 bg-gray-200 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-300 transition-all duration-200">
-                    Annuler
-                </button>
-                <button id="modal-pay-button" type="button" data-i18n="btn_confirm" class="flex-1 baniki-gradient text-white font-bold py-3 rounded-lg hover:bg-opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Confirmer le Paiement
-                </button>
-            </div>
-            
-        </div>
-    </div>
+                {users[selectedUserInspector] && (
+                  <div className="bg-black p-4 rounded-xl border border-gray-800 flex-1 flex flex-col font-mono text-xs text-gray-300 overflow-y-auto gap-4">
+                    <div>
+                      <span className="text-emerald-400 font-bold">// Paramètres de Sécurité</span>
+                      <pre className="mt-2 text-slate-400 text-[11px]">
+                        {JSON.stringify({
+                          id: users[selectedUserInspector].id,
+                          role: users[selectedUserInspector].role,
+                          name: users[selectedUserInspector].name,
+                          phone: users[selectedUserInspector].phone,
+                          merchantCode: users[selectedUserInspector].merchantCode || "Non applicable",
+                          securePin: `**** (PIN : ${users[selectedUserInspector].code})`,
+                          status: users[selectedUserInspector].status
+                        }, null, 2)}
+                      </pre>
+                    </div>
 
+                    <div className="border-t border-gray-800 pt-3"> 
+                      <span className="text-yellow-400 font-bold">// Portefeuille Dual-Devise</span> 
+                      <pre className="mt-2 text-slate-400 text-[11px]">
+                        {JSON.stringify({
+                          compte_FC: `${(users[selectedUserInspector].balanceFC || 0).toLocaleString()} FC`,
+                          compte_USD: `${(users[selectedUserInspector].balanceUSD || 0).toLocaleString()} USD`,
+                          com_cumulees_FC: users[selectedUserInspector].commissionFC !== undefined ? `${(users[selectedUserInspector].commissionFC || 0).toLocaleString()} FC` : "0 FC",
+                          com_cumulees_USD: users[selectedUserInspector].commissionUSD !== undefined ? `${(users[selectedUserInspector].commissionUSD || 0).toLocaleString()} USD` : "0 USD"
+                        }, null, 2)}
+                      </pre>
+                    </div>
+
+                    <div className="border-t border-gray-800 pt-3 flex-1"> 
+                      <span className="text-pink-400 font-bold">// Écran de Contrôle Réseau</span>
+                      <div className="mt-2 bg-gray-900 p-2.5 rounded border border-gray-800 text-[10px] leading-relaxed text-gray-300">
+                        {phoneStates[selectedUserInspector]?.notification ? (
+                          <div className="text-yellow-400">
+                            <strong>[PUSH SMS REÇU]</strong><br />
+                            "{phoneStates[selectedUserInspector].notification.text}"
+                          </div>
+                        ) : (
+                          <span className="text-slate-500">Pas de SMS non-lu sur ce terminal mobile.</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Console logs */}
+              <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 h-[250px] flex flex-col">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Logs d'activité réseau Vodacom</h3>
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                  {systemAlerts.map(alert => (
+                    <div 
+                      key={alert.id} 
+                      className={`p-2.5 rounded-lg text-xs border flex gap-2 items-start ${
+                        alert.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                        alert.type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300' :
+                        'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-current mt-1.5 animate-ping"></span>
+                      <p className="flex-1">{alert.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 2: ACTIVE SMARTPHONES SCREEN */}
+        {activeTab === 'phones' && (
+          <div>
+            <div className="bg-yellow-950/20 border border-yellow-500/25 p-4 rounded-xl mb-6 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Consignes d'utilisation du réseau multi-acteurs synchronisé</h3> 
+                <p className="text-xs text-slate-300 mt-1">
+                  Tous les terminaux sont interconnectés en temps réel via la base de données cloud Supabase. Effectuez des transferts, paiements marchands ou dépôts sur un terminal et observez les autres appareils se mettre à jour instantanément sans rechargement de page.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+              
+              {/* PHONE 1: TREASURY REGULATOR */}
+              {users.tresor && (
+                <PhoneFrame 
+                  userKey="tresor"
+                  user={users.tresor} 
+                  phoneState={phoneStates.tresor}
+                  setPhoneStates={setPhoneStates}
+                  isSelected={selectedUserInspector === 'tresor'}
+                  onSelect={() => setSelectedUserInspector('tresor')}
+                  transactions={transactions}
+                >
+                  <TresorAppScreen 
+                    user={users.tresor} 
+                    phoneState={phoneStates.tresor}
+                    setPhoneStates={setPhoneStates}
+                    onMintMoney={handleTresorMintMoney}
+                    onSupplySuperAgent={handleTresorSupplySuperAgent}
+                    superAgentName={users.superAgent?.name || "Super Agent"}
+                  />
+                </PhoneFrame>
+              )}
+
+              {/* PHONE 2: SUPER AGENT */}
+              {users.superAgent && (
+                <PhoneFrame 
+                  userKey="superAgent"
+                  user={users.superAgent} 
+                  phoneState={phoneStates.superAgent}
+                  setPhoneStates={setPhoneStates}
+                  isSelected={selectedUserInspector === 'superAgent'}
+                  onSelect={() => setSelectedUserInspector('superAgent')}
+                  transactions={transactions}
+                >
+                  <SuperAgentAppScreen 
+                    user={users.superAgent} 
+                    phoneState={phoneStates.superAgent}
+                    setPhoneStates={setPhoneStates}
+                    onSupplyAgent={handleSuperAgentSupplyAgent}
+                    agentName={users.agent?.name || "Kiosque Agent"}
+                    agentPhone={users.agent?.phone || ""}
+                  />
+                </PhoneFrame>
+              )}
+
+              {/* PHONE 3: AGENT KIOSK */}
+              {users.agent && (
+                <PhoneFrame 
+                  userKey="agent"
+                  user={users.agent} 
+                  phoneState={phoneStates.agent}
+                  setPhoneStates={setPhoneStates}
+                  isSelected={selectedUserInspector === 'agent'}
+                  onSelect={() => setSelectedUserInspector('agent')}
+                  transactions={transactions}
+                >
+                  <AgentAppScreen 
+                    user={users.agent} 
+                    phoneState={phoneStates.agent}
+                    setPhoneStates={setPhoneStates}
+                    onCashIn={handleAgentCashIn}
+                    onCashOut={handleAgentCashOut}
+                  />
+                </PhoneFrame>
+              )}
+
+              {/* PHONE 4: REGISTERED MERCHANT */}
+              {users.merchant && (
+                <PhoneFrame 
+                  userKey="merchant"
+                  user={users.merchant} 
+                  phoneState={phoneStates.merchant}
+                  setPhoneStates={setPhoneStates}
+                  isSelected={selectedUserInspector === 'merchant'}
+                  onSelect={() => setSelectedUserInspector('merchant')}
+                  transactions={transactions}
+                >
+                  <MerchantAppScreen 
+                    user={users.merchant} 
+                    phoneState={phoneStates.merchant}
+                    setPhoneStates={setPhoneStates}
+                    transactions={transactions}
+                  />
+                </PhoneFrame>
+              )}
+
+              {/* PHONE 5: CLIENT A (JEAN) */}
+              {users.clientA && (
+                <PhoneFrame 
+                  userKey="clientA"
+                  user={users.clientA} 
+                  phoneState={phoneStates.clientA}
+                  setPhoneStates={setPhoneStates}
+                  isSelected={selectedUserInspector === 'clientA'}
+                  onSelect={() => setSelectedUserInspector('clientA')}
+                  transactions={transactions}
+                >
+                  <ClientAppScreen 
+                    userKey="clientA"
+                    user={users.clientA} 
+                    receiverUser={users.clientB || { name: 'Marie Kabange', phone: '+243 822 987 654' }}
+                    receiverKey="clientB"
+                    phoneState={phoneStates.clientA}
+                    setPhoneStates={setPhoneStates}
+                    merchantCode={users.merchant?.merchantCode || "882211"}
+                    onSendMoney={(receiverKey, amount, curr, pin) => handleClientSendMoney('clientA', receiverKey, amount, curr, pin)}
+                    onPayMerchant={(merchantCode, amount, curr, pin) => handlePayMerchant('clientA', merchantCode, amount, curr, pin)}
+                  />
+                </PhoneFrame>
+              )}
+
+              {/* PHONE 6: CLIENT B (MARIE) */}
+              {users.clientB && (
+                <PhoneFrame 
+                  userKey="clientB"
+                  user={users.clientB} 
+                  phoneState={phoneStates.clientB}
+                  setPhoneStates={setPhoneStates}
+                  isSelected={selectedUserInspector === 'clientB'}
+                  onSelect={() => setSelectedUserInspector('clientB')}
+                  transactions={transactions}
+                >
+                  <ClientAppScreen 
+                    userKey="clientB"
+                    user={users.clientB} 
+                    receiverUser={users.clientA || { name: 'Jean Dupont', phone: '+243 812 345 678' }}
+                    receiverKey="clientA"
+                    phoneState={phoneStates.clientB}
+                    setPhoneStates={setPhoneStates}
+                    merchantCode={users.merchant?.merchantCode || "882211"}
+                    onSendMoney={(receiverKey, amount, curr, pin) => handleClientSendMoney('clientB', receiverKey, amount, curr, pin)}
+                    onPayMerchant={(merchantCode, amount, curr, pin) => handlePayMerchant('clientB', merchantCode, amount, curr, pin)}
+                  />
+                </PhoneFrame>
+              )}
+
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: ACCOUNT REGISTRATION PORTAL */}
+        {activeTab === 'register' && (
+          <RegisterScreen 
+            onRegister={handleRegisterUser} 
+            onCancel={() => setActiveTab('dashboard')} 
+          />
+        )}
+
+      </main>
+
+      <footer className="border-t border-slate-900 bg-slate-950 px-6 py-4 mt-auto text-center text-xs text-slate-500">
+        Simulateur d'Écosystème Blive v4.5 Cloud - Banikilabs. Connecté avec succès à Supabase (Mode Polling).
+      </footer>
+    </div>
+  );
+}
+
+// Integrated Interactive Phone Frame
+function PhoneFrame({ userKey, user, phoneState, setPhoneStates, children, isSelected, onSelect, transactions }) {
+  
+  const toggleLocalHistory = (e) => {
+    e.stopPropagation();
+    const targetScreen = phoneState.screen === 'local_history' ? 'home' : 'local_history';
+    setPhoneStates(prev => ({
+      ...prev,
+      [userKey]: { ...prev[userKey], screen: targetScreen }
+    }));
+  };
+
+  return (
+    <div 
+      onClick={onSelect}
+      className={`relative mx-auto w-full max-w-[270px] h-[550px] rounded-[36px] bg-slate-900 border-4 ${isSelected ? 'border-red-500 shadow-xl shadow-red-950/30' : 'border-slate-800'} overflow-hidden flex flex-col transition-all cursor-pointer`}
+    > 
+      {/* Notch */}
+      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-28 h-4 bg-black rounded-full z-30 flex items-center justify-center">
+        <div className="w-2.5 h-2.5 rounded-full bg-slate-850 ml-auto mr-1.5"></div>
+      </div>
+
+      {/* Simulator Bar */}
+      <div className="h-7 bg-slate-950 px-4 pt-1.5 flex justify-between items-center text-[9px] text-slate-400 font-semibold select-none z-20">
+        <span>12:45</span>
+        <div className="flex items-center space-x-1"> 
+          <span className="text-[7px] bg-red-600 px-1 rounded text-white font-extrabold">Voda RDC</span>
+          <span className="w-3 h-1.5 bg-slate-700 rounded-sm relative">
+            <span className="absolute top-0.5 left-0.5 bottom-0.5 right-0.5 bg-emerald-400 rounded-sm"></span>
+          </span>
+        </div>
+      </div>
+
+      {/* Push Notification Banner */}
+      {phoneState?.notification && (
+        <div className="absolute top-8 left-2 right-2 bg-black/95 text-white p-2 rounded-xl border border-yellow-500/30 shadow-lg z-50 text-[10px] leading-snug flex items-start gap-1.5 animate-bounce">
+          <div className="bg-yellow-500 rounded p-0.5 text-black">
+            <Bell className="w-3 h-3" />
+          </div>
+          <div className="flex-1">
+            <div className="flex justify-between font-bold text-yellow-400 mb-0.5 text-[8px]">
+              <span>M-PESA INSTANTANÉ</span>
+              <span>Maintenant</span>
+            </div>
+            <p className="font-medium text-slate-200 text-[9px]">{phoneState.notification.text}</p>
+          </div>
+        </div>
+      )}
+
+      {/* M-Pesa Workspace screen */}
+      <div className="flex-1 bg-black flex flex-col overflow-y-auto relative z-10">
+        
+        {/* App Bar */}
+        <div className="bg-yellow-500 text-black p-3 pt-1 flex flex-col shadow-md">
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-black text-xs tracking-wider">m-pesa</span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={toggleLocalHistory}
+                className="p-1 rounded bg-black/20 hover:bg-black/40 text-white transition-colors flex items-center justify-center"
+                title="Consulter mon historique"
+              >
+                <History className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[8px] bg-black/30 px-1.5 py-0.5 rounded-full text-slate-200">
+                {user.role === 'tresor' ? 'Régulateur' : user.role === 'superAgent' ? 'SuperAgent' : user.role === 'agent' ? 'Agent' : user.role === 'merchant' ? 'Marchand' : 'Client'} 
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <div className="w-5.5 h-5.5 rounded-full bg-white/20 flex items-center justify-center font-bold text-[10px]">
+              {user.name ? user.name.charAt(0) : 'U'}
+            </div>
+            <div className="overflow-hidden">
+              <h4 className="text-[10px] font-bold leading-tight truncate">{user.name}</h4> 
+              <p className="text-[8px] text-red-200">{user.phone}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Display Layout */}
+        <div className="flex-1 p-2 flex flex-col text-slate-100">
+          {phoneState.screen === 'local_history' ? (
+            <LocalHistoryScreen 
+              user={user} 
+              transactions={transactions} 
+              onClose={() => setPhoneStates(prev => ({ ...prev, [userKey]: { ...prev[userKey], screen: 'home' } }))} 
+            />
+          ) : (
+            children
+          )}
+        </div>
+
+      </div>
+
+      {/* Interactive Home Indicator Bar */}
+      <div className="h-4 bg-slate-950 flex items-center justify-center z-20">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setPhoneStates(prev => ({
+              ...prev,
+              [userKey]: { ...prev[userKey], screen: 'home', error: '' }
+            }));
+          }}
+          className="w-16 h-1 bg-slate-700 rounded-full hover:bg-slate-500 transition-all"
+        ></button>
+      </div>
+    </div>
+  );
+}
+
+// Local Transaction logs for a specific phone terminal
+function LocalHistoryScreen({ user, transactions, onClose }) {
+  const myTx = transactions.filter(tx => 
+    tx.sender === user.name || tx.receiver === user.name
+  );
+
+  return (
+    <div className="flex flex-col flex-1 text-[11px]">
+      <div className="flex justify-between items-center border-b border-slate-800 pb-1.5 mb-2">
+        <h3 className="font-bold text-red-400 flex items-center gap-1">
+          <History className="w-3.5 h-3.5" /> Mon Historique 
+        </h3>
+        <button onClick={onClose} className="text-[9px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
+          Fermer
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-1.5 pr-0.5">
+        {myTx.length === 0 ? (
+          <p className="text-center text-slate-500 text-[10px] py-8">Aucune transaction enregistrée pour ce compte.</p>
+        ) : (
+          myTx.map((tx, idx) => {
+            const isSender = tx.sender === user.name;
+            return (
+              <div key={idx} className="bg-slate-900 p-2 rounded border border-slate-800 flex justify-between items-center">
+                <div className="overflow-hidden flex-1 mr-1"> 
+                  <p className="font-bold text-[10px] truncate">
+                    {tx.type === 'MINT_MONNAIE' ? 'Création de Float' : isSender ? `Vers: ${tx.receiver}` : `De: ${tx.sender}`}
+                  </p>
+                  <p className="text-[8px] text-slate-400">{tx.date}</p>
+                </div>
+                <div className="text-right">
+                  <p className={`font-extrabold ${isSender ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {isSender ? '-' : '+'}{(tx.amount || 0).toLocaleString()} {tx.currency} 
+                  </p>
+                  <span className="text-[7px] bg-slate-800 px-1 rounded text-slate-300">{tx.id}</span>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// SCREEN 1: VODACOM TREASURY APP
+function TresorAppScreen({ user, phoneState, setPhoneStates, onMintMoney, onSupplySuperAgent, superAgentName }) {
+  const [localAmount, setLocalAmount] = useState('');
+  const [localCurrency, setLocalCurrency] = useState('FC');
+  const [localPin, setLocalPin] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const resetForm = () => {
+    setLocalAmount('');
+    setLocalPin('');
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const handleAction = (screen) => {
+    resetForm();
+    setPhoneStates(prev => ({
+      ...prev,
+      tresor: { ...prev.tresor, screen }
+    }));
+  };
+
+  const submitMint = async () => {
+    const res = await onMintMoney(localAmount, localCurrency, localPin);
+    if (res.success) {
+      setSuccessMsg(`Fonds émis : +${localAmount} ${localCurrency} ajoutés au Trésor !`);
+      setTimeout(() => handleAction('home'), 2200);
+    } else {
+      setErrorMsg(res.msg);
+    }
+  };
+
+  const submitSupply = async () => {
+    const res = await onSupplySuperAgent(localAmount, localCurrency, localPin);
+    if (res.success) {
+      setSuccessMsg("Float expédié au Super Agent avec succès !");
+      setTimeout(() => handleAction('home'), 2200);
+    } else {
+      setErrorMsg(res.msg);
+    }
+  };
+
+  if (phoneState.screen === 'home') {
+    return (
+      <div className="flex flex-col flex-1 text-[11px]">
+        <div className="bg-gray-900 border border-gray-800 p-2.5 rounded-xl mb-3">
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider text-center">Trésorerie Centrale</p>
+          <div className="grid grid-cols-2 gap-1 mt-1.5">
+            <div className="bg-black p-1 rounded border border-gray-800 text-center">
+              <span className="text-[8px] text-yellow-400 font-bold">SOLDE CDF</span>
+              <p className="font-extrabold text-[12px] truncate">{(user.balanceFC || 0).toLocaleString()} FC</p>
+            </div>
+            <div className="bg-black p-1 rounded border border-gray-800 text-center">
+              <span className="text-[8px] text-emerald-400 font-bold">SOLDE USD</span> 
+              <p className="font-extrabold text-[12px] truncate">{(user.balanceUSD || 0).toLocaleString()} $</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 mb-3">
+          <button 
+            onClick={() => handleAction('mint')} 
+            className="p-2.5 bg-yellow-500 hover:bg-yellow-400 rounded-xl transition-all font-bold flex items-center justify-center gap-1.5 text-black"
+          >
+            <Landmark className="w-4 h-4" /> Frapper Monnaie Électronique
+          </button>
+          
+          <button 
+            onClick={() => handleAction('supply')}
+            className="p-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl transition-all font-bold flex items-center justify-center gap-1.5"
+          >
+            <ArrowRightLeft className="w-4 h-4 text-emerald-400" /> Transférer Float au Super Agent
+          </button>
+        </div>
+
+        <div className="bg-slate-900/50 border border-slate-850 p-2 rounded text-[9px] text-slate-400 mt-auto">
+          <p className="font-bold text-slate-300">💡 Pouvoir du Trésor :</p>
+          <p>La frappe crée de la monnaie ex-nihilo. Vous distribuez ensuite la monnaie aux Super Agents grossistes.</p>
+          <p className="mt-1 font-bold">Code PIN Régulateur : <span className="text-white font-mono">{user.code}</span></p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phoneState.screen === 'mint') {
+    return (
+      <div className="flex flex-col flex-1 gap-2.5 text-[11px]">
+        <h3 className="font-bold text-yellow-400 flex items-center gap-1"><Landmark className="w-4 h-4" /> Émission de Monnaie</h3>
+        
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Devise d'Émission</label>
+          <div className="grid grid-cols-2 gap-1">
+            <button 
+              onClick={() => setLocalCurrency('FC')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'FC' ? 'bg-yellow-500 text-black' : 'bg-gray-900 text-gray-400'}`}
+            >
+              CDF (FC)
+            </button>
+            <button 
+              onClick={() => setLocalCurrency('USD')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'USD' ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+            >
+              USD ($)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Montant à Générer</label>
+          <input 
+            type="number" 
+            placeholder="Ex: 1000000"
+            value={localAmount}
+            onChange={(e) => setLocalAmount(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">PIN Confidentiel ({user.code})</label>
+          <input 
+            type="password" 
+            maxLength={4}
+            value={localPin}
+            onChange={(e) => setLocalPin(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-center tracking-widest focus:outline-none"
+          />
+        </div>
+
+        {errorMsg && <p className="text-[9px] text-red-400 bg-red-500/10 p-1.5 rounded">{errorMsg}</p>}
+        {successMsg && <p className="text-[9px] text-emerald-400 bg-emerald-500/10 p-1.5 rounded">{successMsg}</p>}
+
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button onClick={() => handleAction('home')} className="bg-gray-900 p-2 rounded border border-gray-800">Retour</button>
+          <button onClick={submitMint} className="bg-yellow-500 font-bold p-2 rounded text-black">Confirmer</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phoneState.screen === 'supply') { 
+    return (
+      <div className="flex flex-col flex-1 gap-2.5 text-[11px]">
+        <h3 className="font-bold text-red-400 flex items-center gap-1"><ArrowRightLeft className="w-4 h-4" /> Distribuer Float</h3>
+        
+        <div className="bg-slate-900 p-2 rounded border border-slate-850">
+          <span className="text-[8px] text-slate-500">Super Agent destinataire :</span>
+          <p className="font-bold text-slate-200">{superAgentName}</p>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Choix de la Devise</label>
+          <div className="grid grid-cols-2 gap-1">
+            <button 
+              onClick={() => setLocalCurrency('FC')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'FC' ? 'bg-yellow-500 text-black' : 'bg-gray-900 text-gray-400'}`}
+            >
+              Franc Congolais (FC)
+            </button>
+            <button 
+              onClick={() => setLocalCurrency('USD')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'USD' ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+            >
+              Dollar US (USD)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Montant du Float</label>
+          <input 
+            type="number" 
+            value={localAmount}
+            onChange={(e) => setLocalAmount(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">PIN Confidentiel Trésor</label>
+          <input 
+            type="password" 
+            maxLength={4}
+            value={localPin}
+            onChange={(e) => setLocalPin(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-center tracking-widest focus:outline-none"
+          />
+        </div>
+
+        {errorMsg && <p className="text-[9px] text-red-400 bg-red-500/10 p-1.5 rounded">{errorMsg}</p>}
+        {successMsg && <p className="text-[9px] text-emerald-400 bg-emerald-500/10 p-1.5 rounded">{successMsg}</p>}
+
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button onClick={() => handleAction('home')} className="bg-gray-900 p-2 rounded border border-gray-800">Retour</button>
+          <button onClick={submitSupply} className="bg-emerald-600 font-bold p-2 rounded">Envoyer Float</button> 
+        </div>
+      </div>
+    );
+  }
+}
+
+// SCREEN 2: VODACOM SUPER AGENT APP
+function SuperAgentAppScreen({ user, phoneState, setPhoneStates, onSupplyAgent, agentName, agentPhone }) {
+  const [localAmount, setLocalAmount] = useState('');
+  const [localCurrency, setLocalCurrency] = useState('FC');
+  const [localPin, setLocalPin] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const handleAction = (screen) => {
+    setLocalAmount('');
+    setLocalPin('');
+    setErrorMsg('');
+    setSuccessMsg('');
+    setPhoneStates(prev => ({
+      ...prev,
+      superAgent: { ...prev.superAgent, screen }
+    }));
+  };
+
+  const submitSupply = async () => {
+    const res = await onSupplyAgent(localAmount, localCurrency, localPin);
+    if (res.success) {
+      setSuccessMsg("Float distribué au Kiosque local avec succès !");
+      setTimeout(() => handleAction('home'), 2200);
+    } else {
+      setErrorMsg(res.msg);
+    }
+  };
+
+  if (phoneState.screen === 'home') {
+    return (
+      <div className="flex flex-col flex-1 text-[11px]">
+        <div className="bg-gray-900 border border-gray-800 p-2.5 rounded-xl mb-3">
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider text-center">Réserve Coffre-fort</p>
+          <div className="grid grid-cols-2 gap-1 mt-1.5">
+            <div className="bg-black p-1 rounded border border-gray-850 text-center">
+              <span className="text-[8px] text-yellow-400">FLOAT CDF</span>
+              <p className="font-extrabold text-[12px] truncate">{(user.balanceFC || 0).toLocaleString()} FC</p>
+            </div>
+            <div className="bg-black p-1 rounded border border-gray-850 text-center">
+              <span className="text-[8px] text-emerald-400 font-bold">FLOAT USD</span> 
+              <p className="font-extrabold text-[12px] truncate">{(user.balanceUSD || 0).toLocaleString()} $</p>
+            </div>
+          </div>
+          <div className="border-t border-slate-800 mt-2 pt-2 flex flex-col gap-0.5 text-[9px] text-slate-400">
+            <div className="flex justify-between">
+              <span>Commission FC :</span>
+              <span className="text-emerald-400 font-bold">{(user.commissionFC || 0).toLocaleString()} FC</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Commission USD :</span>
+              <span className="text-emerald-400 font-bold">{(user.commissionUSD || 0).toLocaleString()} $</span>
+            </div>
+          </div>
+        </div>
+
+        <button 
+          onClick={() => handleAction('supply')}
+          className="w-full p-3 bg-gray-900 border border-gray-800 rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 mb-4 text-center"
+        >
+          <ArrowRightLeft className="w-5 h-5 text-red-500" />
+          <div className="text-left">
+            <p className="font-bold text-slate-200">Fournir du Float à l'Agent</p>
+            <p className="text-[9px] text-slate-500">Créditer Kiosque #45</p>
+          </div>
+        </button>
+
+        <div className="bg-slate-900/50 border border-slate-850 p-2 rounded text-[9px] text-slate-400 mt-auto">
+          <p className="font-bold text-slate-300">💼 Rôle Super Agent :</p>
+          <p>Vous distribuez la monnaie aux kiosques locaux. Si votre float est bas, demandez au Trésor de vous approvisionner.</p>
+          <p className="mt-1 font-bold">Code PIN Super Agent : <span className="text-white font-mono">{user.code}</span></p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phoneState.screen === 'supply') {
+    return (
+      <div className="flex flex-col flex-1 gap-2.5 text-[11px]">
+        <h3 className="font-bold text-yellow-400 flex items-center gap-1"><ArrowRightLeft className="w-4 h-4" /> Approvisionner Kiosque</h3>
+        
+        <div className="bg-slate-900 p-2 rounded border border-slate-850">
+          <p className="text-[9px] text-slate-500">Agent bénéficiaire :</p>
+          <p className="font-bold text-slate-200">{agentName}</p>
+          <p className="font-mono text-slate-400 text-[9px]">{agentPhone}</p>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Devise</label>
+          <div className="grid grid-cols-2 gap-1">
+            <button 
+              onClick={() => setLocalCurrency('FC')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'FC' ? 'bg-yellow-500 text-black' : 'bg-gray-900 text-gray-400'}`}
+            >
+              FC (Franc)
+            </button>
+            <button 
+              onClick={() => setLocalCurrency('USD')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'USD' ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+            >
+              USD (Dollar)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Montant à Transférer</label>
+          <input 
+            type="number" 
+            value={localAmount}
+            onChange={(e) => setLocalAmount(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Votre PIN Super Agent</label>
+          <input 
+            type="password" 
+            maxLength={4}
+            value={localPin}
+            onChange={(e) => setLocalPin(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-center tracking-widest focus:outline-none"
+          />
+        </div>
+
+        {errorMsg && <p className="text-[9px] text-red-400 bg-red-500/10 p-1.5 rounded">{errorMsg}</p>}
+        {successMsg && <p className="text-[9px] text-emerald-400 bg-emerald-500/10 p-1.5 rounded">{successMsg}</p>}
+
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button onClick={() => handleAction('home')} className="bg-gray-900 p-2 rounded border border-gray-800">Retour</button>
+          <button onClick={submitSupply} className="bg-yellow-500 font-bold p-2 rounded text-black">Confirmer</button>
+        </div>
+      </div>
+    );
+  }
+}
+
+// SCREEN 3: VODACOM AGENT KIOSK APP
+function AgentAppScreen({ user, phoneState, setPhoneStates, onCashIn, onCashOut }) {
+  const [localPhone, setLocalPhone] = useState('');
+  const [localAmount, setLocalAmount] = useState('');
+  const [localCurrency, setLocalCurrency] = useState('FC');
+  const [localPin, setLocalPin] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const handleAction = (screen) => {
+    setLocalPhone('');
+    setLocalAmount('');
+    setLocalPin('');
+    setErrorMsg('');
+    setSuccessMsg('');
+    setPhoneStates(prev => ({
+      ...prev,
+      agent: { ...prev.agent, screen }
+    }));
+  };
+
+  const submitCashIn = async () => {
+    const res = await onCashIn(localPhone, localAmount, localCurrency, localPin);
+    if (res.success) {
+      setSuccessMsg("Dépôt mobile validé. Prenez l'espèce physique du client.");
+      setTimeout(() => handleAction('home'), 2200);
+    } else {
+      setErrorMsg(res.msg);
+    }
+  };
+
+  const submitCashOut = async () => {
+    const res = await onCashOut(localPhone, localAmount, localCurrency, localPin);
+    if (res.success) {
+      setSuccessMsg("Retrait électronique validé ! Payez les espèces au client.");
+      setTimeout(() => handleAction('home'), 2200);
+    } else {
+      setErrorMsg(res.msg);
+    }
+  };
+
+  if (phoneState.screen === 'home') {
+    return (
+      <div className="flex flex-col flex-1 text-[11px]">
+        <div className="bg-gray-900 border border-gray-800 p-2.5 rounded-xl mb-3">
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider text-center">Float Kiosque local</p>
+          <div className="grid grid-cols-2 gap-1 mt-1.5">
+            <div className="bg-black p-1 rounded border border-gray-850 text-center">
+              <span className="text-[8px] text-yellow-400">FLOAT CDF</span>
+              <p className="font-extrabold text-[12px] truncate">{(user.balanceFC || 0).toLocaleString()} FC</p>
+            </div>
+            <div className="bg-black p-1 rounded border border-gray-850 text-center">
+              <span className="text-[8px] text-emerald-400 font-bold">FLOAT USD</span> 
+              <p className="font-extrabold text-[12px] truncate">{(user.balanceUSD || 0).toLocaleString()} $</p>
+            </div>
+          </div>
+          <div className="border-t border-slate-800 mt-2 pt-1.5 flex flex-col gap-0.5 text-[9px] text-slate-400">
+            <div className="flex justify-between">
+              <span>Commission FC :</span>
+              <span className="text-emerald-400 font-bold">{(user.commissionFC || 0).toLocaleString()} FC</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Commission USD :</span>
+              <span className="text-emerald-400 font-bold">{(user.commissionUSD || 0).toLocaleString()} $</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <button 
+            onClick={() => handleAction('cashIn')} 
+            className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-850 flex flex-col items-center justify-center gap-1 text-center"
+          >
+            <PlusCircle className="w-5 h-5 text-emerald-400" />
+            <span className="font-semibold text-slate-300">Dépôt (Cash-In)</span>
+          </button>
+
+          <button 
+            onClick={() => handleAction('cashOut')}
+            className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-850 flex flex-col items-center justify-center gap-1 text-center"
+          >
+            <MinusCircle className="w-5 h-5 text-amber-500" />
+            <span className="font-semibold text-slate-300">Retrait (Cash-Out)</span>
+          </button>
+        </div>
+
+        <div className="bg-slate-900/50 border border-slate-850 p-2 rounded text-[9px] text-slate-400 mt-auto">
+          <span className="font-bold text-slate-300 block mb-1">🏪 Kiosque physique :</span>
+          <p>Dépôt : Convertir le cash d'un client en monnaie virtuelle.</p>
+          <p className="mt-0.5">Retrait : Donner du cash réel contre un débit du portefeuille M-Pesa client.</p>
+          <p className="mt-1 font-bold">Code PIN Agent : <span className="text-white font-mono">{user.code}</span></p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phoneState.screen === 'cashIn') {
+    return (
+      <div className="flex flex-col flex-1 gap-2.5 text-[11px]">
+        <h3 className="font-bold text-gray-300 flex items-center gap-1">
+          <PlusCircle className="w-4 h-4 text-emerald-400" /> Dépôt Client
+        </h3>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Téléphone Client bénéficiaire</label>
+          <input 
+            type="text" 
+            placeholder="+243..."
+            value={localPhone}
+            onChange={(e) => setLocalPhone(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white font-mono focus:outline-none"
+          />
+          <div className="flex gap-1.5 mt-1">
+            <button onClick={() => setLocalPhone('+243 812 345 678')} className="text-[8px] bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 border border-slate-800">Jean</button>
+            <button onClick={() => setLocalPhone('+243 822 987 654')} className="text-[8px] bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 border border-slate-800">Marie</button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Devise du Dépôt</label>
+          <div className="grid grid-cols-2 gap-1">
+            <button 
+              onClick={() => setLocalCurrency('FC')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'FC' ? 'bg-yellow-500 text-black' : 'bg-gray-900 text-gray-400'}`}
+            >
+              CDF (FC)
+            </button>
+            <button 
+              onClick={() => setLocalCurrency('USD')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'USD' ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+            >
+              USD ($)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Montant à Déposer</label>
+          <input 
+            type="number" 
+            value={localAmount}
+            onChange={(e) => setLocalAmount(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Votre PIN Agent</label>
+          <input 
+            type="password" 
+            maxLength={4}
+            value={localPin}
+            onChange={(e) => setLocalPin(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-center tracking-widest focus:outline-none"
+          />
+        </div>
+
+        {errorMsg && <p className="text-[9px] text-red-400 bg-red-500/10 p-1.5 rounded">{errorMsg}</p>}
+        {successMsg && <p className="text-[9px] text-emerald-400 bg-emerald-500/10 p-1.5 rounded">{successMsg}</p>}
+
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button onClick={() => handleAction('home')} className="bg-gray-900 p-2 rounded border border-gray-800">Retour</button>
+          <button onClick={submitCashIn} className="bg-emerald-600 font-bold p-2 rounded">Confirmer Dépôt</button> 
+        </div>
+      </div>
+    );
+  }
+
+  if (phoneState.screen === 'cashOut') {
+    return (
+      <div className="flex flex-col flex-1 gap-2.5 text-[11px]"> 
+        <h3 className="font-bold text-slate-300 flex items-center gap-1">
+          <MinusCircle className="w-4 h-4 text-amber-500" /> Confirmer un Retrait
+        </h3>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Téléphone Client qui retire</label>
+          <input 
+            type="text" 
+            placeholder="+243..."
+            value={localPhone}
+            onChange={(e) => setLocalPhone(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white font-mono focus:outline-none"
+          />
+          <div className="flex gap-1.5 mt-1">
+            <button onClick={() => setLocalPhone('+243 812 345 678')} className="text-[8px] bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 border border-slate-800">Jean</button>
+            <button onClick={() => setLocalPhone('+243 822 987 654')} className="text-[8px] bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 border border-slate-800">Marie</button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Devise du Retrait</label>
+          <div className="grid grid-cols-2 gap-1">
+            <button 
+              onClick={() => setLocalCurrency('FC')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'FC' ? 'bg-yellow-500 text-black' : 'bg-gray-900 text-gray-400'}`}
+            >
+              CDF (FC)
+            </button>
+            <button 
+              onClick={() => setLocalCurrency('USD')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'USD' ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+            >
+              USD ($)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Montant Réel Retiré</label>
+          <input 
+            type="number" 
+            value={localAmount}
+            onChange={(e) => setLocalAmount(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Votre PIN Agent</label>
+          <input 
+            type="password" 
+            maxLength={4}
+            value={localPin}
+            onChange={(e) => setLocalPin(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-center tracking-widest focus:outline-none"
+          />
+        </div>
+
+        {errorMsg && <p className="text-[9px] text-red-400 bg-red-500/10 p-1.5 rounded">{errorMsg}</p>}
+        {successMsg && <p className="text-[9px] text-emerald-400 bg-emerald-500/10 p-1.5 rounded">{successMsg}</p>}
+
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button onClick={() => handleAction('home')} className="bg-gray-900 p-2 rounded border border-gray-800">Retour</button>
+          <button onClick={submitCashOut} className="bg-amber-600 font-bold p-2 rounded">Retirer Float</button> 
+        </div>
+      </div>
+    );
+  }
+}
+
+// SCREEN 4: VODACOM REGISTERED MERCHANT APP
+function MerchantAppScreen({ user, phoneState, setPhoneStates, transactions }) {
+  const merchantSales = transactions.filter(t => t.type === 'PAIEMENT_MARCHAND' && t.receiver === user.name);
+
+  return (
+    <div className="flex flex-col flex-1 text-[11px]">
+      
+      <div className="bg-gray-900 border border-gray-800 p-2.5 rounded-xl mb-3">
+        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider text-center">Portefeuille de Ventes</p>
+        <div className="grid grid-cols-2 gap-1 mt-1.5">
+          <div className="bg-black p-1 rounded border border-gray-850 text-center">
+            <span className="text-[8px] text-yellow-400 font-bold">SOLDE CDF</span>
+            <p className="font-extrabold text-[12px] truncate">{(user.balanceFC || 0).toLocaleString()} FC</p>
+          </div>
+          <div className="bg-black p-1 rounded border border-gray-850 text-center">
+            <span className="text-[8px] text-emerald-400 font-bold">SOLDE USD</span> 
+            <p className="font-extrabold text-[12px] truncate">{(user.balanceUSD || 0).toLocaleString()} $</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl mb-3 flex flex-col items-center justify-center">
+        <p className="text-[9px] text-slate-400 mb-0.5 font-bold">CODE MARCHAND UNIQUE</p>
+        <div className="bg-white text-black font-black px-4 py-1 rounded text-base tracking-widest font-mono shadow-inner">
+          {user.merchantCode}
+        </div>
+        <div className="flex items-center gap-1 mt-1 text-[8px] text-slate-400">
+          <QrCode className="w-3 h-3 text-yellow-500" />
+          <span>Scanner pour régler la facture</span>
+        </div>
+      </div>
+
+      <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
+        <span>Ventes Récentes</span>
+        <span className="bg-slate-800 text-slate-300 px-1.5 rounded">{merchantSales.length}</span>
+      </h3>
+
+      <div className="flex-1 overflow-y-auto max-h-[140px] space-y-1.5 pr-0.5">
+        {merchantSales.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-center text-slate-500 text-[9px] py-4">
+            Aucun achat enregistré.<br />Initiez un paiement marchand depuis un client.
+          </div>
+        ) : (
+          merchantSales.map((sale, idx) => (
+            <div key={idx} className="bg-slate-900 p-2 rounded border border-slate-850 flex justify-between items-center text-[10px]">
+              <div>
+                <p className="font-bold text-slate-200 truncate max-w-[90px]">{sale.sender}</p>
+                <p className="text-[7px] text-slate-500">{sale.date}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-extrabold text-emerald-400">+{(sale.amount || 0).toLocaleString()} {sale.currency}</p>
+                <p className="text-[7px] text-slate-500">Net après commission (0.5%)</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="bg-slate-900/40 border border-slate-850 p-2 rounded text-[8px] text-slate-500 mt-2">
+        Les frais marchands sont de 0.5%, reversés à l'écosystème d'agents et au régulateur Trésor.
+      </div>
+
+    </div>
+  );
+}
+
+// SCREEN 5 & 6: VODACOM STANDARD CLIENTS APP
+function ClientAppScreen({ userKey, user, receiverUser, receiverKey, phoneState, setPhoneStates, merchantCode, onSendMoney, onPayMerchant }) {
+  const [localAmount, setLocalAmount] = useState('');
+  const [localCurrency, setLocalCurrency] = useState('FC');
+  const [localTarget, setLocalTarget] = useState('');
+  const [localPin, setLocalPin] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const resetForm = () => {
+    setLocalAmount('');
+    setLocalTarget('');
+    setLocalPin('');
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const handleAction = (screen) => {
+    resetForm();
+    setPhoneStates(prev => ({
+      ...prev,
+      [userKey]: { ...prev[userKey], screen }
+    }));
+  };
+
+  const submitSend = async () => {
+    if (localTarget !== receiverUser.phone) {
+      setErrorMsg("Numéro de destinataire incorrect pour ce test.");
+      return;
+    }
+    const res = await onSendMoney(receiverKey, localAmount, localCurrency, localPin);
+    if (res.success) {
+      setSuccessMsg("Envoi effectué avec succès !");
+      setTimeout(() => handleAction('home'), 2000);
+    } else {
+      setErrorMsg(res.msg);
+    }
+  };
+
+  const submitPayMerchant = async () => {
+    if (localTarget !== merchantCode) {
+      setErrorMsg("Code Marchand incorrect.");
+      return;
+    }
+    const res = await onPayMerchant(localTarget, localAmount, localCurrency, localPin);
+    if (res.success) {
+      setSuccessMsg("Paiement Marchand approuvé !");
+      setTimeout(() => handleAction('home'), 2000);
+    } else {
+      setErrorMsg(res.msg);
+    }
+  };
+
+  if (phoneState.screen === 'home') {
+    return (
+      <div className="flex flex-col flex-1 text-[11px]">
+        <div className="bg-gray-900 border border-gray-800 p-2.5 rounded-xl mb-3">
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider text-center">Mes Comptes M-Pesa</p>
+          <div className="grid grid-cols-2 gap-1 mt-1.5">
+            <div className="bg-black p-1 rounded border border-gray-800 text-center">
+              <span className="text-[8px] text-yellow-400 font-bold">SOLDE CDF</span>
+              <p className="font-extrabold text-[12px] truncate">{(user.balanceFC || 0).toLocaleString()} FC</p>
+            </div>
+            <div className="bg-black p-1 rounded border border-gray-800 text-center">
+              <span className="text-[8px] text-emerald-400 font-bold">SOLDE USD</span> 
+              <p className="font-extrabold text-[12px] truncate">{(user.balanceUSD || 0).toLocaleString()} $</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5 mb-3">
+          <button 
+            onClick={() => handleAction('send')}
+            className="p-2.5 bg-gray-900 border border-gray-800 rounded-xl hover:bg-gray-800 transition-colors flex flex-col items-center justify-center gap-1 text-center"
+          >
+            <Send className="w-4 h-4 text-red-500" />
+            <span className="font-semibold text-slate-300">Envoi d'Argent</span>
+          </button>
+
+          <button 
+            onClick={() => handleAction('payMerchant')}
+            className="p-2.5 bg-gray-900 border border-gray-800 rounded-xl hover:bg-gray-800 transition-colors flex flex-col items-center justify-center gap-1 text-center"
+          >
+            <ShoppingBag className="w-4 h-4 text-yellow-500" />
+            <span className="font-semibold text-slate-300">Payer Marchand</span>
+          </button>
+        </div>
+
+        <div className="bg-slate-900/55 border border-slate-850 p-2 rounded text-[8px] text-slate-400 mt-auto">
+          <span className="font-bold text-slate-300 block mb-0.5">ℹ️ Guide de Simulation :</span>
+          <p>Destinataire : <span className="text-white font-mono">{receiverUser.phone}</span> ({receiverUser.name})</p>
+          <p className="mt-0.5">Marchand code : <span className="text-white font-mono">{merchantCode}</span></p>
+          <p className="mt-0.5">PIN d'opération : <span className="text-white font-mono">{user.code}</span></p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phoneState.screen === 'send') {
+    return (
+      <div className="flex flex-col flex-1 gap-2 text-[11px]">
+        <h3 className="font-bold text-gray-300 flex items-center gap-1">
+          <Send className="w-3.5 h-3.5 text-red-500" /> Envoi d'argent instantané
+        </h3>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Téléphone Bénéficiaire</label>
+          <input 
+            type="text" 
+            placeholder="+243..."
+            value={localTarget}
+            onChange={(e) => setLocalTarget(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-1.5 rounded text-white font-mono focus:outline-none"
+          />
+          <button 
+            onClick={() => setLocalTarget(receiverUser.phone)} 
+            className="text-[8px] text-indigo-400 font-bold mt-0.5 block hover:underline"
+          >
+            Saisir le numéro de {receiverUser.name}
+          </button>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Devise</label>
+          <div className="grid grid-cols-2 gap-1">
+            <button 
+              onClick={() => setLocalCurrency('FC')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'FC' ? 'bg-yellow-500 text-black' : 'bg-gray-900 text-gray-400'}`}
+            >
+              CDF (FC)
+            </button>
+            <button 
+              onClick={() => setLocalCurrency('USD')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'USD' ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+            >
+              USD ($)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Montant à transférer</label>
+          <input 
+            type="number" 
+            value={localAmount}
+            onChange={(e) => setLocalAmount(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-1.5 rounded text-white focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Code PIN (4 chiffres)</label>
+          <input 
+            type="password" 
+            maxLength={4}
+            value={localPin}
+            onChange={(e) => setLocalPin(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-1.5 rounded text-center tracking-widest focus:outline-none"
+          />
+        </div>
+
+        {errorMsg && <p className="text-[9px] text-red-400 bg-red-500/10 p-1 rounded">{errorMsg}</p>}
+        {successMsg && <p className="text-[9px] text-emerald-400 bg-emerald-500/10 p-1 rounded">{successMsg}</p>}
+
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button onClick={() => handleAction('home')} className="bg-gray-900 p-1.5 rounded border border-gray-800">Retour</button>
+          <button onClick={submitSend} className="bg-yellow-500 font-bold p-1.5 rounded text-black">Confirmer</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phoneState.screen === 'payMerchant') {
+    return (
+      <div className="flex flex-col flex-1 gap-2 text-[11px]">
+        <h3 className="font-bold text-gray-300 flex items-center gap-1">
+          <ShoppingBag className="w-3.5 h-3.5 text-yellow-500" /> Payer un Marchand M-Pesa
+        </h3>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Code Marchand (6 chiffres)</label>
+          <input 
+            type="text" 
+            maxLength={6}
+            value={localTarget}
+            onChange={(e) => setLocalTarget(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-1.5 rounded text-white font-mono text-center focus:outline-none"
+          />
+          <button 
+            onClick={() => setLocalTarget(merchantCode)} 
+            className="text-[8px] text-yellow-500 font-bold mt-0.5 block hover:underline"
+          >
+            Saisir le code {merchantCode}
+          </button>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-0.5">Devise</label>
+          <div className="grid grid-cols-2 gap-1">
+            <button 
+              onClick={() => setLocalCurrency('FC')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'FC' ? 'bg-yellow-500 text-black' : 'bg-gray-900 text-gray-400'}`}
+            >
+              CDF (FC)
+            </button>
+            <button 
+              onClick={() => setLocalCurrency('USD')} 
+              className={`py-1 rounded font-bold ${localCurrency === 'USD' ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+            >
+              USD ($)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Montant de l'Achat</label>
+          <input 
+            type="number" 
+            value={localAmount}
+            onChange={(e) => setLocalAmount(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-1.5 rounded text-white focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-[9px] text-slate-500 block mb-1">Code PIN M-Pesa</label>
+          <input 
+            type="password" 
+            maxLength={4}
+            value={localPin}
+            onChange={(e) => setLocalPin(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 p-1.5 rounded text-center tracking-widest focus:outline-none"
+          />
+        </div>
+
+        {errorMsg && <p className="text-[9px] text-red-400 bg-red-500/10 p-1 rounded">{errorMsg}</p>}
+        {successMsg && <p className="text-[9px] text-emerald-400 bg-emerald-500/10 p-1 rounded">{successMsg}</p>}
+
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button onClick={() => handleAction('home')} className="bg-gray-900 p-1.5 rounded border border-gray-800">Retour</button>
+          <button onClick={submitPayMerchant} className="bg-yellow-500 font-bold p-1.5 rounded text-black">Régler</button>
+        </div>
+      </div>
+    );
+  }
+}
+
+// REGISTER ACCOUNT SCREEN COMPONENT
+function RegisterScreen({ onRegister, onCancel }) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name || !phone || !pin) {
+      setError("Veuillez remplir tous les champs.");
+      return;
+    }
+    if (pin.length !== 4 || isNaN(pin)) {
+      setError("Le code PIN doit être composé de 4 chiffres.");
+      return;
+    }
+    onRegister({ name, phone, pin });
+  };
+
+  return (
+    <div className="max-w-md mx-auto w-full bg-gray-900 rounded-2xl border border-gray-800 p-6 my-8">
+      <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+        <PlusCircle className="w-6 h-6 text-yellow-500" /> Ouvrir un Compte Client M-Pesa
+      </h2>
+      <p className="text-xs text-slate-400 mb-6">Enregistrez un nouveau portefeuille client sur la base de données cloud.</p>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="text-xs text-slate-300 block mb-1 font-semibold">Nom Complet</label>
+          <input 
+            type="text" 
+            placeholder="Ex: Patient Mwamba"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full bg-black border border-gray-800 focus:border-yellow-500 outline-none p-3 rounded-xl text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs text-slate-300 block mb-1 font-semibold">Numéro de Téléphone (Unique)</label>
+          <input 
+            type="text" 
+            placeholder="Ex: +243 812 000 111"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            className="w-full bg-black border border-gray-800 focus:border-yellow-500 outline-none p-3 rounded-xl text-sm font-mono"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs text-slate-300 block mb-1 font-semibold">Code PIN secret (4 chiffres)</label>
+          <input 
+            type="password" 
+            maxLength={4}
+            placeholder="****"
+            value={pin}
+            onChange={e => setPin(e.target.value)}
+            className="w-full bg-black border border-gray-800 focus:border-yellow-500 outline-none p-3 rounded-xl text-center text-sm tracking-widest font-mono"
+          />
+        </div>
+
+        {error && <p className="text-xs text-red-400 bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">{error}</p>}
+
+        <div className="flex gap-3 pt-4">
+          <button 
+            type="button" 
+            onClick={onCancel}
+            className="flex-1 py-3 border border-gray-800 hover:bg-slate-800 rounded-xl text-sm font-semibold transition-colors text-slate-400"
+          >
+            Annuler
+          </button>
+          <button 
+            type="submit" 
+            className="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl text-sm font-bold transition-all shadow-md shadow-yellow-500/10"
+          >
+            Enregistrer le compte
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+    </script>
 </body>
 </html>
